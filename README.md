@@ -1,6 +1,6 @@
-# ExamSphere – Examination Management System (CoreUI React prototype)
+# MinDA Examination Management System
 
-The original HTML/Tailwind prototype ported onto the **CoreUI Free React Admin Template** (Vite + React + @coreui/react).
+Front-end Project for the MinDA Examination Management System (using CoreUI ReactJS template)
 
 ## Run
 ```bash
@@ -20,5 +20,3 @@ npm run build    # production build -> ./build
 | Shared state, actions, toasts (replaces the prototype's global `state`) | `src/exam/ExamContext.jsx` |
 | Demo dataset (3 exams, questions, examinees) | `src/exam/data.js` |
 | Sidebar nav / routes | `src/_nav.jsx`, `src/routes.js` |
-
-Data is in-memory only (resets on refresh), same as the prototype. To persist, replace the `useState(seedExams)` in `ExamContext.jsx` with API calls or localStorage.
