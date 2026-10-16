@@ -8,6 +8,10 @@ body {
   background-color: var(--cui-tertiary-bg);
 }
 
+a {
+  text-decoration: none;
+}
+
 .wrapper {
   width: 100%;
   padding-inline: var(--cui-sidebar-occupy-start, 0) var(--cui-sidebar-occupy-end, 0);
@@ -25,6 +29,7 @@ body {
 }
 
 .sidebar-header {
+  justify-content: center;
   .nav-underline-border {
     --cui-nav-underline-border-link-padding-x: 1rem;
     --cui-nav-underline-border-gap: 0;
@@ -64,4 +69,86 @@ body {
   .footer {
     --cui-footer-bg: var(--cui-body-bg);
   }
+}
+
+
+// CUSTOM CSS
+
+//FONT
+//new default fonts
+@font-face {
+	font-family: 'CeraRoundPro';
+	src: url('../assets/fonts/CeraRoundPro-Bold.otf') format('truetype');
+	font-weight: bold;
+	font-style: normal;
+}
+
+@font-face {
+	font-family: 'CeraRoundPro';
+	src: url('../assets/fonts/CeraRoundPro-Black.otf') format('truetype');
+	font-weight: 900;
+	font-style: normal;
+}
+
+@font-face {
+	font-family: 'CeraRoundPro';
+	src: url('../assets/fonts/CeraRoundPro-Light.otf') format('truetype');
+	font-weight: 300;
+	font-style: normal;
+}
+
+@font-face {
+	font-family: 'CeraRoundPro';
+	src: url('../assets/fonts/CeraRoundPro-Medium.otf') format('truetype');
+	font-weight: 500;
+	font-style: normal;
+}
+
+@font-face {
+	font-family: 'CeraRoundPro';
+	src: url('../assets/fonts/CeraRoundPro-Regular.otf') format('truetype');
+	font-weight: normal;
+	font-style: normal;
+}
+
+@font-face {
+	font-family: 'CeraRoundPro';
+	src: url('../assets/fonts/CeraRoundPro-Thin.otf') format('truetype');
+	font-weight: 100;
+	font-style: normal;
+}
+
+body {
+	font-family: 'CeraRoundPro', sans-serif;
+  }
+  
+h1, h2, h3, h4, h5, h6, p {
+	font-family: 'CeraRoundPro', sans-serif;
+}
+
+h1 {
+	font-weight: bold;
+}
+
+h2 {
+	font-weight: 600;
+}
+
+h3 {
+	font-weight: 600;
+}
+
+h4, h5, h6 {
+	font-weight: 500;
+}
+
+p {
+	font-weight: 300;
+	font-size: 15px;
+}
+
+// CARDS
+.card {
+	border: 0px;
+	border-radius: 1em;
 }

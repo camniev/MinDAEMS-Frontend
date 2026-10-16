@@ -78,7 +78,7 @@ const CreateExamModal = () => {
               <CFormLabel>Exam Title *</CFormLabel>
               <CFormInput
                 required
-                placeholder="e.g. MATH-201 Calculus II Final Exam"
+                placeholder="e.g. DMO I KMD Examination"
                 value={f.title}
                 onChange={set('title')}
               />

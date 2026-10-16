@@ -173,7 +173,7 @@ export const ExamProvider = ({ children }) => {
   return (
     <ExamContext.Provider value={value}>
       {children}
-      <CToaster placement="bottom-end" className="p-3">
+      <CToaster placement="top-end" className="p-3">
         {toasts.map((t) => (
           <CToast
             key={t.id}

@@ -77,12 +77,8 @@ const AppSidebar = () => {
       <CSidebarHeader className="border-bottom">
         <CSidebarBrand to="/">
           <span className="sidebar-brand-full d-flex align-items-center gap-2">
-            <CIcon icon={cilEducation} height={28} className="text-primary" />
             <span className="text-start lh-1">
-              <span className="d-block fw-bold fs-5">ExamSphere</span>
-              <small className="text-primary text-uppercase" style={{ fontSize: 10 }}>
-                Admin Portal
-              </small>
+              <span className="d-block fw-bold fs-5">MinDAEMS</span>
             </span>
           </span>
           <CIcon customClassName="sidebar-brand-narrow" icon={cilEducation} height={28} />

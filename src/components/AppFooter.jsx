@@ -4,14 +4,8 @@ import { CFooter } from '@coreui/react'
 const AppFooter = () => (
   <CFooter className="px-4">
     <div>
-      <strong>ExamSphere</strong>
-      <span className="ms-1">&copy; 2026 Examination Management System (prototype)</span>
-    </div>
-    <div className="ms-auto">
-      <span className="me-1">Powered by</span>
-      <a href="https://coreui.io/react" target="_blank" rel="noopener noreferrer">
-        CoreUI React Admin &amp; Dashboard Template
-      </a>
+      <strong>MinDA Examination Management System</strong>
+      <span className="ms-1">&copy; 2026 <a href="https://minda.gov.ph" target="_blank" rel="noopener noreferrer">Mindanao Development Authority (MinDA)</a></span>
     </div>
   </CFooter>
 )

@@ -21,7 +21,7 @@ import { useExam } from 'src/exam/ExamContext'
 import { STATUS_COLOR } from 'src/exam/data'
 
 const Stat = ({ label, value, note, icon, color, noteColor }) => (
-  <CCard className="h-100">
+  <CCard className="h-100 p-2">
     <CCardBody>
       <div className="d-flex justify-content-between align-items-start">
         <span className="text-body-secondary small fw-semibold text-uppercase">{label}</span>
@@ -123,7 +123,7 @@ const Dashboard = () => {
       <CRow className="g-3 mb-4">
         <CCol lg={8}>
           <CCard
-            className="h-100 text-white border-0"
+            className="h-100 text-white border-0 p-2"
             style={{ background: 'linear-gradient(135deg,#312e81,#1e1b4b 55%,#0f172a)' }}
           >
             <CCardBody className="d-flex flex-column justify-content-between">
@@ -184,7 +184,7 @@ const Dashboard = () => {
         </CCol>
 
         <CCol lg={4}>
-          <CCard className="h-100">
+          <CCard className="h-100 p-2">
             <CCardBody className="d-flex flex-column justify-content-between">
               <div>
                 <h5 className="mb-0">Quick Management Tasks</h5>
@@ -219,7 +219,7 @@ const Dashboard = () => {
         </CCol>
       </CRow>
 
-      <CCard className="mb-4">
+      <CCard className="mb-4 p-2">
         <CCardBody>
           <div className="d-flex justify-content-between align-items-center mb-3">
             <div>
