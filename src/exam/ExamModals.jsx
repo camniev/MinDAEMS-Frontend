@@ -84,10 +84,10 @@ const CreateExamModal = () => {
               />
             </CCol>
             <CCol sm={6}>
-              <CFormLabel>Subject / Course Code *</CFormLabel>
+              <CFormLabel>Exam Code *</CFormLabel>
               <CFormInput
                 required
-                placeholder="e.g. Mathematics"
+                placeholder="e.g. DMO_I_KMD"
                 value={f.subject}
                 onChange={set('subject')}
               />
