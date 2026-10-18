@@ -135,15 +135,15 @@ const Dashboard = () => {
                         ● CURRENTLY ACTIVE EXAM
                       </CBadge>
                       <span className="small opacity-75">
-                        Code: <strong className="font-monospace">{active.accessCode}</strong>
+                        Code: <strong className="font-monospace">{active.examCode}</strong>
                       </span>
                     </div>
-                    <h4 className="fw-bold">{active.title}</h4>
+                    <h4 className="fw-bold">{active.examTitle}</h4>
                     <p className="opacity-75 mb-0">{active.instructions}</p>
                   </div>
                   <CRow className="mt-4 pt-3 border-top border-light border-opacity-25 g-3">
                     {[
-                      ['Duration', `${active.duration} Minutes`],
+                      ['Duration', `${active.durationMinutesMinutes} Minutes`],
                       ['Questions', `${active.questions.length} Items`],
                       ['Enrolled', `${active.examinees.length} Examinees`],
                       ['Pass Score', `${active.passingScore}% Minimum`],
@@ -241,12 +241,12 @@ const Dashboard = () => {
                       <CBadge color={STATUS_COLOR[e.status]}>{e.status}</CBadge>
                       <span className="small text-body-secondary">
                         <CIcon icon={cilClock} size="sm" className="me-1" />
-                        {e.duration} mins
+                        {e.durationMinutes} mins
                       </span>
                     </div>
-                    <div className="fw-bold text-truncate">{e.title}</div>
+                    <div className="fw-bold text-truncate">{e.examTitle}</div>
                     <div className="small text-body-secondary">
-                      {e.subject} • {e.date}
+                      {e.subject} • {e.examDate}
                     </div>
                   </div>
                   <div className="d-flex justify-content-between align-items-center border-top pt-2 mt-3">

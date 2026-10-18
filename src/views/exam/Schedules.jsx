@@ -30,7 +30,7 @@ const Schedules = () => {
   const q = search.trim().toLowerCase()
   const list = exams
     .filter((e) => filter === 'all' || e.status === filter)
-    .filter((e) => !q || `${e.title} ${e.subject} ${e.accessCode}`.toLowerCase().includes(q))
+    .filter((e) => !q || `${e.examTitle} ${e.subject} ${e.examCode}`.toLowerCase().includes(q))
 
   const go = (id, path) => {
     setSelectedId(id)
@@ -80,7 +80,7 @@ const Schedules = () => {
                         {e.status === 'Active' ? '● Active Now' : e.status}
                       </CBadge>
                     </div>
-                    <h5>{e.title}</h5>
+                    <h5>{e.examTitle}</h5>
                     <ul className="list-unstyled small mt-3 mb-0 d-grid gap-2">
                       <li>
                         <CIcon icon={cilCalendar} className="text-primary me-2" />
@@ -92,7 +92,7 @@ const Schedules = () => {
                       </li>
                       <li>
                         <CIcon icon={cilLockLocked} className="text-primary me-2" />
-                        Access Code: <code className="fw-bold">{e.accessCode}</code>{' '}
+                        Access Code: <code className="fw-bold">{e.examCode}</code>{' '}
                         <span className="text-body-secondary">({e.accessType})</span>
                       </li>
                       <li>

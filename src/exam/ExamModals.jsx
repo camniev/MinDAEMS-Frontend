@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import PropTypes from 'prop-types'
 import {
   CAlert,
   CBadge,
@@ -21,55 +22,167 @@ import {
   CNavItem,
   CNavLink,
   CRow,
+  CSpinner,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilClock, cilPaperPlane } from '@coreui/icons'
 import { useExam } from './ExamContext'
 
+// Vite only inlines env vars that are (a) prefixed VITE_ and (b) read via
+// import.meta.env — `import.meta.ADD_NEW_EXAM_SCHEDULES_API_ENDPOINT` is
+// neither, so it was always `undefined` and every request went to
+// "undefined/Exam/AddNewExamSchedules". Add VITE_API_BASE_URL to your .env
+// (and restart `npm run dev` — Vite only reads .env at startup).
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
+const ADD_NEW_EXAM_SCHEDULES_API_ENDPOINT = `${API_BASE_URL}/api/Exam/AddNewExamSchedules`
+const USER_ID = '24fefc6e-ed0a-4e2e-95f3-9e448928e31d'
+
+/** Reads a useful message out of a failed fetch Response, including
+ * ASP.NET Core's ValidationProblemDetails shape ({ title, errors: {Field: [...]} }). */
+const extractErrorMessage = async (response, fallback) => {
+  try {
+    const data = await response.json()
+
+    if (typeof data === 'string' && data.trim()) {
+      return data
+    }
+
+    const firstFieldError = Object.values(data?.errors ?? {})[0]
+
+    if (Array.isArray(firstFieldError) && firstFieldError.length) {
+      return firstFieldError[0]
+    }
+
+    return data?.message || fallback
+  } catch {
+    return fallback
+  }
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+const todayISO = () => new Date().toISOString().split('T')[0]
+
 const emptyExam = () => {
   const d = new Date()
   d.setDate(d.getDate() + 1)
   return {
-    title: '',
-    subject: '',
+    examTitle: '',
+    examCode: '',
     accessType: 'Private',
-    date: d.toISOString().split('T')[0],
+    examDate: d.toISOString().split('T')[0],
     startTime: '10:00',
-    duration: 60,
+    durationMinutes: 60,
     passingScore: 70,
     instructions: '',
   }
 }
 
-const CreateExamModal = () => {
-  const { createOpen, closeCreate, addExam } = useExam()
-  const [f, setF] = useState(emptyExam)
-  const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
+const validateExam = (f) => {
+  const errors = {}
+  if (!f.examTitle.trim()) errors.examTitle = 'Exam title is required.'
+  if (!f.examCode.trim()) errors.examCode = 'Exam code is required.'
+  else if (!/^[A-Za-z0-9_-]+$/.test(f.examCode.trim()))
+    errors.examCode = 'Use only letters, numbers, underscores, and dashes.'
+  if (!f.examDate) errors.examDate = 'Scheduled date is required.'
+  else if (f.examDate < todayISO()) errors.examDate = 'Date cannot be in the past.'
+  if (!f.startTime) errors.startTime = 'Start time is required.'
+  const durationMinutes = Number(f.durationMinutes)
+  if (!Number.isFinite(durationMinutes) || durationMinutes < 5) errors.durationMinutes = 'Duration must be at least 5 minutes.'
+  const passingScore = Number(f.passingScore)
+  if (!Number.isFinite(passingScore) || passingScore < 1 || passingScore > 100)
+    errors.passingScore = 'Passing score must be between 1 and 100.'
+  return errors
+}
 
-  const submit = (e) => {
+const CreateExamModal = () => {
+  const { createOpen, closeCreate, addExam, toast } = useExam()
+  const [f, setF] = useState(emptyExam)
+  const [errors, setErrors] = useState({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const isMounted = useRef(true)
+  useEffect(
+    () => () => {
+      isMounted.current = false
+    },
+    [],
+  )
+
+  const set = (k) => (e) => {
+    setF((prev) => ({ ...prev, [k]: e.target.value }))
+    setErrors((prev) => (prev[k] ? { ...prev, [k]: undefined } : prev))
+  }
+
+  const handleShow = () => {
+    setF(emptyExam())
+    setErrors({})
+    setIsSubmitting(false)
+  }
+
+  const submit = async (e) => {
     e.preventDefault()
-    addExam({
-      ...f,
-      title: f.title.trim(),
-      subject: f.subject.trim(),
-      duration: parseInt(f.duration),
-      passingScore: parseInt(f.passingScore),
+    const validationErrors = validateExam(f)
+    if (Object.keys(validationErrors).length) {
+      setErrors(validationErrors)
+      return
+    }
+
+    const payload = {
+      examTitle: f.examTitle.trim(),
+      examCode: f.examCode.trim().toUpperCase(),
+      accessType: f.accessType,
+      examDate: f.examDate,
+      // normalize "HH:MM" from <input type="time"> to "HH:MM:SS" for .NET TimeOnly
+      startTime: f.startTime.length === 5 ? `${f.startTime}:00` : f.startTime,
+      durationMinutes: Number(f.durationMinutes),
+      passingScore: Number(f.passingScore),
       instructions: f.instructions.trim(),
-    })
-    closeCreate()
+      userId: USER_ID,
+    }
+
+    setIsSubmitting(true)
+    try {
+      const response = await fetch(ADD_NEW_EXAM_SCHEDULES_API_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        throw new Error(await extractErrorMessage(response, 'Failed to save the exam schedule.'))
+      }
+
+      // AddNewExamSchedules only returns { message: "..." } — it doesn't send
+      // back the saved row (no generated ExamId, no server-assigned fields).
+      // So there's nothing useful to read off the response for addExam; sync
+      // the form data we already have instead. If you later change the
+      // endpoint to return the created exam (recommended — the UI can't know
+      // the real ExamId otherwise), swap this back to reading `created`.
+      const created = await response.json().catch(() => null)
+      addExam(payload)
+      toast('Examination schedule added successfully.', 'success')
+      closeCreate()
+    } catch (error) {
+      console.error(`Failed to save the exam schedule: ${error}`)
+      toast(error.message || 'Failed to save the exam schedule.', 'error')
+    } finally {
+      if (isMounted.current) setIsSubmitting(false)
+    }
   }
 
   return (
     <CModal
       size="lg"
       visible={createOpen}
-      onShow={() => setF(emptyExam())}
-      onClose={closeCreate}
+      onShow={handleShow}
+      onClose={() => !isSubmitting && closeCreate()}
+      backdrop={isSubmitting ? 'static' : true}
+      keyboard={!isSubmitting}
       scrollable
       alignment="center"
     >
-      <CForm onSubmit={submit}>
-        <CModalHeader>
+      <CForm noValidate onSubmit={submit}>
+        <CModalHeader closeButton={!isSubmitting}>
           <CModalTitle>Schedule New Examination</CModalTitle>
         </CModalHeader>
         <CModalBody>
@@ -77,55 +190,78 @@ const CreateExamModal = () => {
             <CCol xs={12}>
               <CFormLabel>Exam Title *</CFormLabel>
               <CFormInput
-                required
                 placeholder="e.g. DMO I KMD Examination"
-                value={f.title}
-                onChange={set('title')}
+                value={f.examTitle}
+                onChange={set('examTitle')}
+                invalid={!!errors.examTitle}
+                feedbackInvalid={errors.examTitle}
+                disabled={isSubmitting}
               />
             </CCol>
             <CCol sm={6}>
               <CFormLabel>Exam Code *</CFormLabel>
               <CFormInput
-                required
                 placeholder="e.g. DMO_I_KMD"
-                value={f.subject}
-                onChange={set('subject')}
+                value={f.examCode}
+                onChange={set('examCode')}
+                invalid={!!errors.examCode}
+                feedbackInvalid={errors.examCode}
+                disabled={isSubmitting}
               />
             </CCol>
             <CCol sm={6}>
               <CFormLabel>Access Type *</CFormLabel>
-              <CFormSelect value={f.accessType} onChange={set('accessType')}>
+              <CFormSelect value={f.accessType} onChange={set('accessType')} disabled={isSubmitting}>
                 <option value="Private">Private (Passcode Required)</option>
                 <option value="Public">Public Access</option>
               </CFormSelect>
             </CCol>
             <CCol sm={6}>
               <CFormLabel>Scheduled Date *</CFormLabel>
-              <CFormInput type="date" required value={f.date} onChange={set('date')} />
+              <CFormInput
+                type="date"
+                min={todayISO()}
+                value={f.examDate}
+                onChange={set('examDate')}
+                invalid={!!errors.examDate}
+                feedbackInvalid={errors.examDate}
+                disabled={isSubmitting}
+              />
             </CCol>
             <CCol sm={6}>
               <CFormLabel>Start Time *</CFormLabel>
-              <CFormInput type="time" required value={f.startTime} onChange={set('startTime')} />
+              <CFormInput
+                type="time"
+                value={f.startTime}
+                onChange={set('startTime')}
+                invalid={!!errors.startTime}
+                feedbackInvalid={errors.startTime}
+                disabled={isSubmitting}
+              />
             </CCol>
             <CCol sm={6}>
               <CFormLabel>Duration (Minutes) *</CFormLabel>
               <CFormInput
                 type="number"
-                required
                 min={5}
                 value={f.duration}
                 onChange={set('duration')}
+                invalid={!!errors.duration}
+                feedbackInvalid={errors.duration}
+                disabled={isSubmitting}
               />
             </CCol>
             <CCol sm={6}>
               <CFormLabel>Passing Score (%) *</CFormLabel>
               <CFormInput
                 type="number"
-                required
                 min={1}
                 max={100}
                 value={f.passingScore}
                 onChange={set('passingScore')}
+                invalid={!!errors.passingScore}
+                feedbackInvalid={errors.passingScore}
+                disabled={isSubmitting}
               />
             </CCol>
             <CCol xs={12}>
@@ -135,15 +271,17 @@ const CreateExamModal = () => {
                 placeholder="Specify exam rules, allowed calculators, reference materials, etc..."
                 value={f.instructions}
                 onChange={set('instructions')}
+                disabled={isSubmitting}
               />
             </CCol>
           </CRow>
         </CModalBody>
         <CModalFooter>
-          <CButton color="secondary" variant="outline" onClick={closeCreate}>
+          <CButton color="secondary" variant="outline" onClick={closeCreate} disabled={isSubmitting}>
             Cancel
           </CButton>
-          <CButton color="primary" type="submit">
+          <CButton color="primary" type="submit" disabled={isSubmitting}>
+            {isSubmitting && <CSpinner size="sm" className="me-2" />}
             Save Schedule Event
           </CButton>
         </CModalFooter>
@@ -152,16 +290,82 @@ const CreateExamModal = () => {
   )
 }
 
-const blank = { name: '', email: '', studentId: '', department: '' }
+const blankExaminee = { name: '', email: '', studentId: '', department: '' }
+
+const validateExaminee = (f) => {
+  const errors = {}
+  if (!f.name.trim()) errors.name = 'Full name is required.'
+  if (!f.email.trim()) errors.email = 'Email is required.'
+  else if (!EMAIL_RE.test(f.email.trim())) errors.email = 'Enter a valid email address.'
+  if (!f.studentId.trim()) errors.studentId = 'Student ID is required.'
+  return errors
+}
+
+/** Parses "Name, Email, StudentID, Department" lines, validating and
+ * de-duplicating by email (case-insensitive) within the pasted batch. */
+const parseBulkExaminees = (raw) => {
+  const seenEmails = new Set()
+  const valid = []
+  const skipped = []
+
+  raw
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .forEach((line, i) => {
+      const [name, email, studentId, department] = line.split(',').map((p) => p.trim())
+      const lineNo = i + 1
+      if (!name || !email) {
+        skipped.push(`Line ${lineNo}: missing name or email.`)
+        return
+      }
+      if (!EMAIL_RE.test(email)) {
+        skipped.push(`Line ${lineNo}: invalid email "${email}".`)
+        return
+      }
+      const key = email.toLowerCase()
+      if (seenEmails.has(key)) {
+        skipped.push(`Line ${lineNo}: duplicate email "${email}".`)
+        return
+      }
+      seenEmails.add(key)
+      valid.push({
+        name,
+        email,
+        studentId: studentId || `STU-${Math.floor(1000 + Math.random() * 9000)}`,
+        department: department || 'General',
+      })
+    })
+
+  return { valid, skipped }
+}
 
 const AddExamineeModal = () => {
   const { addExamineeOpen, closeAddExaminee, addExaminees, toast } = useExam()
   const [tab, setTab] = useState('single')
-  const [f, setF] = useState(blank)
+  const [f, setF] = useState(blankExaminee)
+  const [errors, setErrors] = useState({})
   const [bulk, setBulk] = useState('')
+
+  const handleShow = () => {
+    setTab('single')
+    setF(blankExaminee)
+    setErrors({})
+    setBulk('')
+  }
+
+  const set = (k) => (e) => {
+    setF((prev) => ({ ...prev, [k]: e.target.value }))
+    setErrors((prev) => (prev[k] ? { ...prev, [k]: undefined } : prev))
+  }
 
   const single = (e) => {
     e.preventDefault()
+    const validationErrors = validateExaminee(f)
+    if (Object.keys(validationErrors).length) {
+      setErrors(validationErrors)
+      return
+    }
     addExaminees(
       [
         {
@@ -178,35 +382,23 @@ const AddExamineeModal = () => {
 
   const bulkSubmit = (e) => {
     e.preventDefault()
-    const list = bulk
-      .split('\n')
-      .map((l) => l.split(',').map((p) => p.trim()))
-      .filter((p) => p.length >= 2)
-      .map((p) => ({
-        name: p[0] || 'Unknown',
-        email: p[1] || 'student@university.edu',
-        studentId: p[2] || 'STU-' + Math.floor(1000 + Math.random() * 9000),
-        department: p[3] || 'General',
-      }))
-    if (!list.length)
-      return toast('No valid lines found. Use: Full Name, Email, StudentID, Department', 'error')
-    addExaminees(list, `Successfully imported ${list.length} examinees!`)
+    const { valid, skipped } = parseBulkExaminees(bulk)
+    if (!valid.length) {
+      toast('No valid lines found. Use: Full Name, Email, StudentID, Department', 'error')
+      return
+    }
+    addExaminees(
+      valid,
+      `Imported ${valid.length} examinee${valid.length === 1 ? '' : 's'}${
+        skipped.length ? ` (${skipped.length} line${skipped.length === 1 ? '' : 's'} skipped)` : ''
+      }!`,
+    )
+    if (skipped.length) console.warn('Skipped bulk import lines:', skipped)
     closeAddExaminee()
   }
 
-  const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
-
   return (
-    <CModal
-      visible={addExamineeOpen}
-      onShow={() => {
-        setTab('single')
-        setF(blank)
-        setBulk('')
-      }}
-      onClose={closeAddExaminee}
-      alignment="center"
-    >
+    <CModal visible={addExamineeOpen} onShow={handleShow} onClose={closeAddExaminee} alignment="center">
       <CModalHeader>
         <CModalTitle>Add Examinees to Schedule</CModalTitle>
       </CModalHeader>
@@ -223,35 +415,38 @@ const AddExamineeModal = () => {
         </CNavItem>
       </CNav>
       {tab === 'single' ? (
-        <CForm onSubmit={single}>
+        <CForm noValidate onSubmit={single}>
           <CModalBody className="d-grid gap-3">
             <div>
               <CFormLabel>Full Name *</CFormLabel>
               <CFormInput
-                required
                 placeholder="e.g. Alexander Wright"
                 value={f.name}
                 onChange={set('name')}
+                invalid={!!errors.name}
+                feedbackInvalid={errors.name}
               />
             </div>
             <div>
               <CFormLabel>Email Address *</CFormLabel>
               <CFormInput
                 type="email"
-                required
                 placeholder="alexander@university.edu"
                 value={f.email}
                 onChange={set('email')}
+                invalid={!!errors.email}
+                feedbackInvalid={errors.email}
               />
             </div>
             <CRow className="g-3">
               <CCol xs={6}>
                 <CFormLabel>Student ID *</CFormLabel>
                 <CFormInput
-                  required
                   placeholder="STU-2026-09"
                   value={f.studentId}
                   onChange={set('studentId')}
+                  invalid={!!errors.studentId}
+                  feedbackInvalid={errors.studentId}
                 />
               </CCol>
               <CCol xs={6}>
@@ -274,11 +469,12 @@ const AddExamineeModal = () => {
           </CModalFooter>
         </CForm>
       ) : (
-        <CForm onSubmit={bulkSubmit}>
+        <CForm noValidate onSubmit={bulkSubmit}>
           <CModalBody>
             <CFormLabel>Paste Bulk Examinee Records</CFormLabel>
             <p className="small text-body-secondary">
-              Format line by line: <code>Full Name, Email, StudentID, Department</code>
+              Format line by line: <code>Full Name, Email, StudentID, Department</code>. Student ID and
+              department are optional — blank ones get a generated ID and &quot;General&quot;.
             </p>
             <CFormTextarea
               rows={6}
@@ -307,28 +503,63 @@ const AddExamineeModal = () => {
 const pad = (n) => String(n).padStart(2, '0')
 
 const PreviewPaper = ({ exam, onSubmit }) => {
-  const [secs, setSecs] = useState(exam.duration * 60)
+  const [secs, setSecs] = useState(Math.max(exam.duration, 0) * 60)
+  const [locked, setLocked] = useState(false)
+  const lockedRef = useRef(false)
+  const onSubmitRef = useRef(onSubmit)
+  onSubmitRef.current = onSubmit
+
+  const finish = () => {
+    if (lockedRef.current) return
+    lockedRef.current = true
+    setLocked(true)
+    onSubmitRef.current()
+  }
+
   useEffect(() => {
-    const t = setInterval(() => setSecs((s) => Math.max(0, s - 1)), 1000)
+    if (exam.duration <= 0) return undefined
+    const t = setInterval(() => {
+      setSecs((s) => {
+        if (s <= 1) {
+          clearInterval(t)
+          finish()
+          return 0
+        }
+        return s - 1
+      })
+    }, 1000)
     return () => clearInterval(t)
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exam.duration])
+
   const total = exam.questions.reduce((n, q) => n + q.points, 0)
+  const timeUp = secs <= 0
 
   return (
     <>
-      <CAlert color="warning" className="d-flex justify-content-between rounded-0 mb-0 py-2">
+      <CAlert
+        color={timeUp ? 'danger' : 'warning'}
+        className="d-flex justify-content-between rounded-0 mb-0 py-2"
+      >
         <span>
-          <CIcon icon={cilClock} className="me-1" /> Time Remaining:{' '}
-          <strong className="font-monospace">
-            {Math.floor(secs / 60)}:{pad(secs % 60)}
-          </strong>
+          <CIcon icon={cilClock} className="me-1" />
+          {timeUp ? (
+            "Time's Up!"
+          ) : (
+            <>
+              Time Remaining:{' '}
+              <strong className="font-monospace">
+                {Math.floor(secs / 60)}:{pad(secs % 60)}
+              </strong>
+            </>
+          )}
         </span>
         <strong>Total Score: {total} Points</strong>
       </CAlert>
       <CModalBody className="bg-body-tertiary">
         <CCard className="mb-3">
           <CCardBody>
-            <h4>{exam.title}</h4>
+            <h4>{exam.examTitle}</h4>
             <div className="small text-body-secondary">
               Course: {exam.subject} • Duration: {exam.duration} Mins
             </div>
@@ -357,7 +588,7 @@ const PreviewPaper = ({ exam, onSubmit }) => {
                 </CBadge>
               </div>
               {q.type === 'essay' ? (
-                <CFormTextarea rows={3} placeholder="Type your written response here..." />
+                <CFormTextarea rows={3} placeholder="Type your written response here..." disabled={locked} />
               ) : (
                 <div className="d-grid gap-2">
                   {q.options.map((o, oi) => (
@@ -367,6 +598,7 @@ const PreviewPaper = ({ exam, onSubmit }) => {
                         name={`preview-${q.id}`}
                         id={`preview-${q.id}-${oi}`}
                         label={o.text}
+                        disabled={locked}
                       />
                     </div>
                   ))}
@@ -378,14 +610,27 @@ const PreviewPaper = ({ exam, onSubmit }) => {
       </CModalBody>
       <CModalFooter className="justify-content-between">
         <span className="small text-body-secondary d-none d-sm-inline">
-          Interactive preview mode simulate response testing.
+          Interactive preview mode — simulates response testing. Auto-submits when time runs out.
         </span>
-        <CButton color="success" className="ms-auto" onClick={onSubmit}>
-          <CIcon icon={cilPaperPlane} className="me-1" /> Submit Exam Paper
+        <CButton color="success" className="ms-auto" onClick={finish} disabled={locked}>
+          <CIcon icon={cilPaperPlane} className="me-1" />
+          {locked ? 'Submitting…' : 'Submit Exam Paper'}
         </CButton>
       </CModalFooter>
     </>
   )
+}
+
+PreviewPaper.propTypes = {
+  exam: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    examTitle: PropTypes.string,
+    subject: PropTypes.string,
+    duration: PropTypes.number.isRequired,
+    instructions: PropTypes.string,
+    questions: PropTypes.array.isRequired,
+  }).isRequired,
+  onSubmit: PropTypes.func.isRequired,
 }
 
 const LivePreviewModal = () => {
@@ -400,7 +645,7 @@ const LivePreviewModal = () => {
         <CBadge color="success" className="me-2">
           LIVE STUDENT MODE
         </CBadge>
-        <CModalTitle>{previewExam?.title}</CModalTitle>
+        <CModalTitle>{previewExam?.examTitle}</CModalTitle>
       </CModalHeader>
       {previewExam && <PreviewPaper key={previewExam.id} exam={previewExam} onSubmit={submit} />}
     </CModal>

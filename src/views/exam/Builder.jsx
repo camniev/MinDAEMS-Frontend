@@ -146,7 +146,7 @@ const QuestionCard = ({ q, index }) => {
 const BuilderBody = () => {
   const { exams, selectedExam, setSelectedId, saveQuestionnaire, addQuestion, openPreview } =
     useExam()
-  const [title, setTitle] = useState(selectedExam.title)
+  const [title, setTitle] = useState(selectedExam.examTitle)
   const [instructions, setInstructions] = useState(selectedExam.instructions || '')
 
   const total = selectedExam.questions.reduce((n, q) => n + (q.points || 0), 0)
@@ -169,7 +169,7 @@ const BuilderBody = () => {
             >
               {exams.map((e) => (
                 <option key={e.id} value={e.id}>
-                  {e.title}
+                  {e.examTitle}
                 </option>
               ))}
             </CFormSelect>

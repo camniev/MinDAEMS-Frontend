@@ -32,13 +32,15 @@ export const ExamProvider = ({ children }) => {
   const actions = {
     // Schedules
     addExam: (data) => {
-      const prefix = data.subject.substring(0, 3).toUpperCase() || 'EXM'
-      const code = prefix + Math.floor(100 + Math.random() * 900)
+      // examCode is now entered by the user in the Create Exam form (and is
+      // what the backend's ExamCode column stores) — it no longer needs to
+      // be auto-generated here. `userId` is only relevant to the API
+      // request itself, not to the exam record we keep in local state.
+      const { userId: _userId, ...examData } = data
       setExams((xs) => [
         {
-          ...data,
+          ...examData,
           id: uid('exam'),
-          accessCode: code,
           status: 'Upcoming',
           questions: [],
           examinees: [],
@@ -54,8 +56,8 @@ export const ExamProvider = ({ children }) => {
       toast('Exam Schedule removed.', 'info')
     },
     // Builder
-    saveQuestionnaire: (title, instructions) => {
-      patchSelected((e) => ({ ...e, title, instructions }))
+    saveQuestionnaire: (examTitle, instructions) => {
+      patchSelected((e) => ({ ...e, examTitle, instructions }))
       toast('Questionnaire saved successfully!', 'success')
     },
     addQuestion: (type) => {

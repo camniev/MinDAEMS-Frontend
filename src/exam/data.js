@@ -16,16 +16,16 @@ const ex = (id, name, email, studentId, department, status, score = null) => ({
 export const seedExams = [
   {
     id: 'exam-1',
-    title: 'CS-301: Advanced Data Structures & Algorithms',
+    examTitle: 'CS-301: Advanced Data Structures & Algorithms',
     subject: 'Computer Science',
-    date: '2026-09-25',
+    examDate: '2026-09-25',
     startTime: '09:00',
-    duration: 90,
+    durationMinutes: 90,
     passingScore: 70,
     instructions:
       'Calculators are allowed. No outside reference materials permitted. Complete all multiple choice and code analysis questions.',
     accessType: 'Private',
-    accessCode: 'CS301-MID',
+    examCode: 'CS301-MID',
     status: 'Active',
     questions: [
       {
@@ -113,15 +113,15 @@ export const seedExams = [
   },
   {
     id: 'exam-2',
-    title: 'ENG-102: Business Communication & Ethics Final',
+    examTitle: 'ENG-102: Business Communication & Ethics Final',
     subject: 'Humanities',
-    date: '2026-10-02',
+    examDate: '2026-10-02',
     startTime: '13:00',
-    duration: 60,
+    durationMinutes: 60,
     passingScore: 65,
     instructions: 'Read case studies carefully before submitting essay responses.',
     accessType: 'Public',
-    accessCode: 'ENG102-PUB',
+    examCode: 'ENG102-PUB',
     status: 'Upcoming',
     questions: [
       {
@@ -140,16 +140,16 @@ export const seedExams = [
   },
   {
     id: 'exam-3',
-    title: 'MATH-204: Linear Algebra & Differential Equations',
+    examTitle: 'MATH-204: Linear Algebra & Differential Equations',
     subject: 'Mathematics',
-    date: '2026-09-18',
+    examDate: '2026-09-18',
     startTime: '10:00',
-    duration: 120,
+    durationMinutes: 120,
     passingScore: 75,
     instructions:
       'Comprehensive exam covering matrix inversions, eigenvalues, and second-order ODEs.',
     accessType: 'Private',
-    accessCode: 'MATH204-FIN',
+    examCode: 'MATH204-FIN',
     status: 'Completed',
     questions: [
       {
