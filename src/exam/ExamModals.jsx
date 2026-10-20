@@ -160,7 +160,6 @@ const CreateExamModal = () => {
       // the real ExamId otherwise), swap this back to reading `created`.
       const created = await response.json().catch(() => null)
       addExam(payload)
-      toast('Examination schedule added successfully.', 'success')
       closeCreate()
     } catch (error) {
       console.error(`Failed to save the exam schedule: ${error}`)
