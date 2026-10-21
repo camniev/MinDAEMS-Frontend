@@ -34,7 +34,7 @@ import { useExam } from './ExamContext'
 // "undefined/Exam/AddNewExamSchedules". Add VITE_API_BASE_URL to your .env
 // (and restart `npm run dev` — Vite only reads .env at startup).
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
-const ADD_NEW_EXAM_SCHEDULES_API_ENDPOINT = `${API_BASE_URL}/api/Exam/AddNewExamSchedules`
+const ADD_NEW_EXAM_SCHEDULES_API_ENDPOINT = `${API_BASE_URL}/Exam/AddNewExamSchedules`
 const USER_ID = '24fefc6e-ed0a-4e2e-95f3-9e448928e31d'
 
 /** Reads a useful message out of a failed fetch Response, including
@@ -636,7 +636,7 @@ const LivePreviewModal = () => {
   const { previewExam, closePreview, toast } = useExam()
   const submit = () => {
     closePreview()
-    toast('Student preview response submitted successfully!', 'success')
+    toast('Applicant preview response submitted successfully!', 'success')
   }
   return (
     <CModal size="lg" scrollable visible={!!previewExam} onClose={closePreview} alignment="center">

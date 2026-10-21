@@ -42,7 +42,7 @@ const Dashboard = () => {
   const { exams, setSelectedId, openCreate, openPreview } = useExam()
   const active = exams.find((e) => e.status === 'Active')
   const upcoming = exams.filter((e) => e.status === 'Upcoming').length
-  const totalExaminees = exams.reduce((n, e) => n + e.examinees.length, 0)
+  const totalApplicants = exams.reduce((n, e) => n + e.applicants.length, 0)
 
   const go = (id, path) => {
     setSelectedId(id)
@@ -67,9 +67,9 @@ const Dashboard = () => {
     {
       icon: cilUserPlus,
       color: 'warning',
-      title: 'Import Examinees',
+      title: 'Import Applicants',
       sub: 'Single or bulk text import',
-      onClick: () => navigate('/examinees'),
+      onClick: () => navigate('/applicants'), // route path left as-is — confirm with routes.js/_nav.jsx before renaming
     },
   ]
 
@@ -97,8 +97,8 @@ const Dashboard = () => {
         </CCol>
         <CCol sm={6} lg={3}>
           <Stat
-            label="Total Examinees"
-            value={totalExaminees}
+            label="Total Applicants"
+            value={totalApplicants}
             icon={cilPeople}
             color="info"
             note="Enrolled across all events"
@@ -143,9 +143,9 @@ const Dashboard = () => {
                   </div>
                   <CRow className="mt-4 pt-3 border-top border-light border-opacity-25 g-3">
                     {[
-                      ['Duration', `${active.durationMinutesMinutes} Minutes`],
+                      ['Duration', `${active.durationMinutes} Minutes`],
                       ['Questions', `${active.questions.length} Items`],
-                      ['Enrolled', `${active.examinees.length} Examinees`],
+                      ['Enrolled', `${active.applicants.length} Applicants`],
                       ['Pass Score', `${active.passingScore}% Minimum`],
                     ].map(([k, v]) => (
                       <CCol xs={6} sm={3} key={k}>
@@ -162,9 +162,9 @@ const Dashboard = () => {
                       color="light"
                       variant="outline"
                       size="sm"
-                      onClick={() => go(active.id, '/examinees')}
+                      onClick={() => go(active.id, '/applicants')}
                     >
-                      <CIcon icon={cilPeople} className="me-1" /> Examinee Roster
+                      <CIcon icon={cilPeople} className="me-1" /> Applicant Roster
                     </CButton>
                     <CButton
                       color="success"
@@ -172,7 +172,7 @@ const Dashboard = () => {
                       className="ms-auto"
                       onClick={() => openPreview(active.id)}
                     >
-                      <CIcon icon={cilMediaPlay} className="me-1" /> Student Preview
+                      <CIcon icon={cilMediaPlay} className="me-1" /> Applicant Preview
                     </CButton>
                   </div>
                 </>
@@ -246,7 +246,7 @@ const Dashboard = () => {
                     </div>
                     <div className="fw-bold text-truncate">{e.examTitle}</div>
                     <div className="small text-body-secondary">
-                      {e.subject} • {e.examDate}
+                      {e.examDate} • {e.startTime}
                     </div>
                   </div>
                   <div className="d-flex justify-content-between align-items-center border-top pt-2 mt-3">

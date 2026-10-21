@@ -21,18 +21,18 @@ import {
 import CIcon from '@coreui/icons-react'
 import { cilMagnifyingGlass, cilPaperPlane, cilPeople, cilTrash, cilUserPlus } from '@coreui/icons'
 import { useExam } from 'src/exam/ExamContext'
-import { EXAMINEE_COLOR } from 'src/exam/data'
+import { APPLICANT_COLOR } from 'src/exam/data'
 
 const STATUSES = ['all', 'Invited', 'Registered', 'Completed']
 
-const Examinees = () => {
+const Applicants = () => {
   const { exams, selectedExam, setSelectedId, openAddExaminee, removeExaminee, resendInvite } =
     useExam()
   const [status, setStatus] = useState('all')
   const [query, setQuery] = useState('')
 
   const q = query.trim().toLowerCase()
-  const rows = selectedExam.examinees
+  const rows = selectedExam.applicants
     .filter((e) => status === 'all' || e.status === status)
     .filter(
       (e) =>
@@ -61,7 +61,7 @@ const Examinees = () => {
               >
                 {exams.map((e) => (
                   <option key={e.id} value={e.id}>
-                    {e.title} ({e.examinees.length} Students)
+                    {e.examTitle} ({e.applicants.length} Students)
                   </option>
                 ))}
               </CFormSelect>
@@ -119,7 +119,7 @@ const Examinees = () => {
                   <CIcon icon={cilPeople} size="3xl" className="mb-2" />
                   <div>
                     No examinees{' '}
-                    {selectedExam.examinees.length
+                    {selectedExam.applicants.length
                       ? 'match these filters'
                       : 'registered for this schedule yet'}
                     .
@@ -196,4 +196,4 @@ const Examinees = () => {
   )
 }
 
-export default Examinees
+export default Applicants

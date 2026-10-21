@@ -104,7 +104,7 @@ const Schedules = () => {
                   <div className="d-flex justify-content-between align-items-center border-top pt-3 mt-4">
                     <span className="small text-body-secondary">
                       <CIcon icon={cilPeople} className="me-1" />
-                      {e.examinees.length} Students
+                      {e.applicants.length} Students
                     </span>
                     <div className="d-flex gap-1">
                       <CButton
@@ -118,8 +118,8 @@ const Schedules = () => {
                       <CButton
                         color="light"
                         size="sm"
-                        title="Manage Examinees"
-                        onClick={() => go(e.id, '/examinees')}
+                        title="Manage Applicants"
+                        onClick={() => go(e.id, '/applicants')}
                       >
                         <CIcon icon={cilPeople} /> Roster
                       </CButton>

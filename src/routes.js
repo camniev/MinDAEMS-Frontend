@@ -3,7 +3,7 @@ import React from 'react'
 const Dashboard = React.lazy(() => import('./views/exam/Dashboard'))
 const Schedules = React.lazy(() => import('./views/exam/Schedules'))
 const Builder = React.lazy(() => import('./views/exam/Builder'))
-const Examinees = React.lazy(() => import('./views/exam/Examinees'))
+const Applicants = React.lazy(() => import('./views/exam/Applicants'))
 
 export const routes = [
   { path: '/', exact: true, name: 'Home' },
@@ -26,10 +26,10 @@ export const routes = [
     element: Builder,
   },
   {
-    path: '/examinees',
-    name: 'Examinee Directory',
+    path: '/applicants',
+    name: 'Applicants Directory',
     subtitle: 'Manage enrolled candidates and send assessment invitations.',
-    element: Examinees,
+    element: Applicants,
   },
 ]
 

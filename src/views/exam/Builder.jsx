@@ -8,6 +8,7 @@ import {
   CFormInput,
   CFormSelect,
   CFormTextarea,
+  CSpinner,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import {
@@ -28,7 +29,7 @@ const Options = ({ q }) => {
     return (
       <div className="border border-dashed rounded p-3 small fst-italic text-body-secondary bg-body-tertiary">
         <CIcon icon={cilAlignLeft} className="me-2" />
-        Examinees will enter a written text answer in a multiline box.
+        Applicants will enter a written text answer in a multiline box.
       </div>
     )
   }
@@ -144,12 +145,37 @@ const QuestionCard = ({ q, index }) => {
 }
 
 const BuilderBody = () => {
-  const { exams, selectedExam, setSelectedId, saveQuestionnaire, addQuestion, openPreview } =
-    useExam()
+  const {
+    exams,
+    selectedExam,
+    setSelectedId,
+    saveQuestionnaire,
+    saveQuestions,
+    addQuestion,
+    openPreview,
+  } = useExam()
   const [title, setTitle] = useState(selectedExam.examTitle)
   const [instructions, setInstructions] = useState(selectedExam.instructions || '')
+  const [isSaving, setIsSaving] = useState(false)
 
   const total = selectedExam.questions.reduce((n, q) => n + (q.points || 0), 0)
+
+  const handleSave = async () => {
+    setIsSaving(true)
+    try {
+      // saveQuestions() ends with a refetch from the server so the question
+      // list picks up real database ids — but title/instructions have no
+      // backing endpoint yet, so that refetch brings back the *old*
+      // title/instructions from the database. Re-applying saveQuestionnaire
+      // after the refetch keeps the locally-edited title/instructions
+      // visible instead of having them flash back to the stale value.
+      // Remove this ordering once an exam-details endpoint exists.
+      await saveQuestions()
+      saveQuestionnaire(title.trim(), instructions.trim())
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   return (
     <>
@@ -184,14 +210,15 @@ const BuilderBody = () => {
               <div className="fw-bold">{selectedExam.questions.length}</div>
             </div>
             <CButton color="success" size="sm" onClick={() => openPreview(selectedExam.id)}>
-              <CIcon icon={cilMediaPlay} className="me-1" /> Student Preview
+              <CIcon icon={cilMediaPlay} className="me-1" /> Applicant Preview
             </CButton>
-            <CButton
-              color="primary"
-              size="sm"
-              onClick={() => saveQuestionnaire(title.trim(), instructions.trim())}
-            >
-              <CIcon icon={cilSave} className="me-1" /> Save Questionnaire
+            <CButton color="primary" size="sm" onClick={handleSave} disabled={isSaving}>
+              {isSaving ? (
+                <CSpinner size="sm" className="me-1" />
+              ) : (
+                <CIcon icon={cilSave} className="me-1" />
+              )}
+              Save Questionnaire
             </CButton>
           </div>
         </CCardBody>
@@ -208,7 +235,7 @@ const BuilderBody = () => {
             />
             <CFormTextarea
               rows={2}
-              placeholder="Instructions for examinees (e.g., Duration, guidelines, rules)..."
+              placeholder="Instructions for applicants (e.g., Duration, guidelines, rules)..."
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
             />
@@ -245,7 +272,26 @@ const BuilderBody = () => {
 }
 
 const Builder = () => {
-  const { selectedExam } = useExam()
+  const { selectedExam, examsLoading } = useExam()
+  // exams now loads asynchronously from the API, so selectedExam is null
+  // until the first fetch resolves (or if it fails, or the list is empty) —
+  // guard before reaching for selectedExam.id below.
+  if (!selectedExam) {
+    return (
+      <CCard>
+        <CCardBody className="text-center text-body-secondary py-5">
+          {examsLoading ? (
+            <>
+              <CSpinner size="sm" className="me-2" />
+              Loading exam schedules…
+            </>
+          ) : (
+            'No exam schedules available yet. Create one to start building a questionnaire.'
+          )}
+        </CCardBody>
+      </CCard>
+    )
+  }
   // key resets the title/instructions drafts whenever another exam is selected
   return <BuilderBody key={selectedExam.id} />
 }
