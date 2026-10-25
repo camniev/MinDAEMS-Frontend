@@ -289,18 +289,18 @@ const CreateExamModal = () => {
   )
 }
 
-const blankExaminee = { name: '', email: '', studentId: '', department: '' }
+const blankExaminee = { name: '', email: '', applicantCode: '' }
 
 const validateExaminee = (f) => {
   const errors = {}
   if (!f.name.trim()) errors.name = 'Full name is required.'
   if (!f.email.trim()) errors.email = 'Email is required.'
   else if (!EMAIL_RE.test(f.email.trim())) errors.email = 'Enter a valid email address.'
-  if (!f.studentId.trim()) errors.studentId = 'Student ID is required.'
+  if (!f.applicantCode.trim()) errors.applicantCode = 'Applicant Code is required.'
   return errors
 }
 
-/** Parses "Name, Email, StudentID, Department" lines, validating and
+/** Parses "Name, Email, Applicant Code" lines, validating and
  * de-duplicating by email (case-insensitive) within the pasted batch. */
 const parseBulkExaminees = (raw) => {
   const seenEmails = new Set()
@@ -312,7 +312,7 @@ const parseBulkExaminees = (raw) => {
     .map((line) => line.trim())
     .filter(Boolean)
     .forEach((line, i) => {
-      const [name, email, studentId, department] = line.split(',').map((p) => p.trim())
+      const [name, email, applicantCode] = line.split(',').map((p) => p.trim())
       const lineNo = i + 1
       if (!name || !email) {
         skipped.push(`Line ${lineNo}: missing name or email.`)
@@ -331,8 +331,7 @@ const parseBulkExaminees = (raw) => {
       valid.push({
         name,
         email,
-        studentId: studentId || `STU-${Math.floor(1000 + Math.random() * 9000)}`,
-        department: department || 'General',
+        applicantCode: applicantCode || `MinDAES-${Math.floor(1000 + Math.random() * 9000)}`,
       })
     })
 
@@ -340,7 +339,7 @@ const parseBulkExaminees = (raw) => {
 }
 
 const AddExamineeModal = () => {
-  const { addExamineeOpen, closeAddExaminee, addExaminees, toast } = useExam()
+  const { addApplicantOpen, closeAddApplicant, addApplicants, toast } = useExam()
   const [tab, setTab] = useState('single')
   const [f, setF] = useState(blankExaminee)
   const [errors, setErrors] = useState({})
@@ -365,39 +364,38 @@ const AddExamineeModal = () => {
       setErrors(validationErrors)
       return
     }
-    addExaminees(
+    addApplicants(
       [
         {
           name: f.name.trim(),
           email: f.email.trim(),
-          studentId: f.studentId.trim(),
-          department: f.department.trim(),
+          applicantCode: f.applicantCode.trim(),
         },
       ],
       `Added ${f.name.trim()} to roster. Invite code sent!`,
     )
-    closeAddExaminee()
+    closeAddApplicant()
   }
 
   const bulkSubmit = (e) => {
     e.preventDefault()
     const { valid, skipped } = parseBulkExaminees(bulk)
     if (!valid.length) {
-      toast('No valid lines found. Use: Full Name, Email, StudentID, Department', 'error')
+      toast('No valid lines found. Use: Full Name, Email, Applicant Code', 'error')
       return
     }
-    addExaminees(
+    addApplicants(
       valid,
       `Imported ${valid.length} examinee${valid.length === 1 ? '' : 's'}${
         skipped.length ? ` (${skipped.length} line${skipped.length === 1 ? '' : 's'} skipped)` : ''
       }!`,
     )
     if (skipped.length) console.warn('Skipped bulk import lines:', skipped)
-    closeAddExaminee()
+    closeAddApplicant()
   }
 
   return (
-    <CModal visible={addExamineeOpen} onShow={handleShow} onClose={closeAddExaminee} alignment="center">
+    <CModal visible={addApplicantOpen} onShow={handleShow} onClose={closeAddApplicant} alignment="center">
       <CModalHeader>
         <CModalTitle>Add Examinees to Schedule</CModalTitle>
       </CModalHeader>
@@ -419,7 +417,7 @@ const AddExamineeModal = () => {
             <div>
               <CFormLabel>Full Name *</CFormLabel>
               <CFormInput
-                placeholder="e.g. Alexander Wright"
+                placeholder="e.g. Juan dela Cruz"
                 value={f.name}
                 onChange={set('name')}
                 invalid={!!errors.name}
@@ -430,7 +428,7 @@ const AddExamineeModal = () => {
               <CFormLabel>Email Address *</CFormLabel>
               <CFormInput
                 type="email"
-                placeholder="alexander@university.edu"
+                placeholder="juandelacruz@gmail.com"
                 value={f.email}
                 onChange={set('email')}
                 invalid={!!errors.email}
@@ -438,28 +436,20 @@ const AddExamineeModal = () => {
               />
             </div>
             <CRow className="g-3">
-              <CCol xs={6}>
-                <CFormLabel>Student ID *</CFormLabel>
+              <CCol xs={12}>
+                <CFormLabel>Applicant Code *</CFormLabel>
                 <CFormInput
-                  placeholder="STU-2026-09"
-                  value={f.studentId}
-                  onChange={set('studentId')}
-                  invalid={!!errors.studentId}
-                  feedbackInvalid={errors.studentId}
-                />
-              </CCol>
-              <CCol xs={6}>
-                <CFormLabel>Department</CFormLabel>
-                <CFormInput
-                  placeholder="Computer Science"
-                  value={f.department}
-                  onChange={set('department')}
+                  placeholder="DMO_I_KMD_00001"
+                  value={f.applicantCode}
+                  onChange={set('applicantCode')}
+                  invalid={!!errors.applicantCode}
+                  feedbackInvalid={errors.applicantCode}
                 />
               </CCol>
             </CRow>
           </CModalBody>
           <CModalFooter>
-            <CButton color="secondary" variant="outline" onClick={closeAddExaminee}>
+            <CButton color="secondary" variant="outline" onClick={closeAddApplicant}>
               Cancel
             </CButton>
             <CButton color="primary" type="submit">
@@ -472,8 +462,7 @@ const AddExamineeModal = () => {
           <CModalBody>
             <CFormLabel>Paste Bulk Examinee Records</CFormLabel>
             <p className="small text-body-secondary">
-              Format line by line: <code>Full Name, Email, StudentID, Department</code>. Student ID and
-              department are optional — blank ones get a generated ID and &quot;General&quot;.
+              Format line by line: <code>Full Name, Email, Applicant Code</code>. Blank ones get a generated ID and &quot;General&quot;.
             </p>
             <CFormTextarea
               rows={6}
@@ -486,7 +475,7 @@ const AddExamineeModal = () => {
             />
           </CModalBody>
           <CModalFooter>
-            <CButton color="secondary" variant="outline" onClick={closeAddExaminee}>
+            <CButton color="secondary" variant="outline" onClick={closeAddApplicant}>
               Cancel
             </CButton>
             <CButton color="primary" type="submit">

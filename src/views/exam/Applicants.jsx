@@ -17,6 +17,7 @@ import {
   CTableHead,
   CTableHeaderCell,
   CTableRow,
+  CSpinner,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilMagnifyingGlass, cilPaperPlane, cilPeople, cilTrash, cilUserPlus } from '@coreui/icons'
@@ -26,10 +27,38 @@ import { APPLICANT_COLOR } from 'src/exam/data'
 const STATUSES = ['all', 'Invited', 'Registered', 'Completed']
 
 const Applicants = () => {
-  const { exams, selectedExam, setSelectedId, openAddExaminee, removeExaminee, resendInvite } =
-    useExam()
+  const {
+    exams,
+    examsLoading,
+    selectedExam,
+    setSelectedId,
+    openAddApplicant,
+    removeApplicant,
+    resendInvite,
+  } = useExam()
   const [status, setStatus] = useState('all')
   const [query, setQuery] = useState('')
+
+  // exams now loads asynchronously from the API, so selectedExam is null
+  // until the first fetch resolves (or if it fails, or the list is empty).
+  // All hooks above this point run unconditionally on every render, so an
+  // early return here is safe — nothing below needs another hook call.
+  if (!selectedExam) {
+    return (
+      <CCard>
+        <CCardBody className="text-center text-body-secondary py-5">
+          {examsLoading ? (
+            <>
+              <CSpinner size="sm" className="me-2" />
+              Loading exam schedules…
+            </>
+          ) : (
+            'No exam schedules available yet.'
+          )}
+        </CCardBody>
+      </CCard>
+    )
+  }
 
   const q = query.trim().toLowerCase()
   const rows = selectedExam.applicants
@@ -37,7 +66,7 @@ const Applicants = () => {
     .filter(
       (e) =>
         !q ||
-        [e.name, e.email, e.studentId, e.department].some((v) =>
+        [e.name, e.email, e.applicantCode].some((v) =>
           (v || '').toLowerCase().includes(q),
         ),
     )
@@ -61,13 +90,13 @@ const Applicants = () => {
               >
                 {exams.map((e) => (
                   <option key={e.id} value={e.id}>
-                    {e.examTitle} ({e.applicants.length} Students)
+                    {e.examTitle} ({e.applicants.length} Applicants)
                   </option>
                 ))}
               </CFormSelect>
             </div>
-            <CButton color="primary" size="sm" onClick={openAddExaminee}>
-              <CIcon icon={cilUserPlus} className="me-1" /> Add Examinees
+            <CButton color="primary" size="sm" onClick={openAddApplicant}>
+              <CIcon icon={cilUserPlus} className="me-1" /> Add Applicants
             </CButton>
           </div>
           <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 border-top pt-3">
@@ -76,7 +105,7 @@ const Applicants = () => {
                 <CIcon icon={cilMagnifyingGlass} size="sm" />
               </CInputGroupText>
               <CFormInput
-                placeholder="Search examinee by name, email, ID..."
+                placeholder="Search applicant by name, email, ID..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
@@ -104,8 +133,8 @@ const Applicants = () => {
         <CTable align="middle" hover responsive className="mb-0">
           <CTableHead color="light">
             <CTableRow>
-              <CTableHeaderCell className="ps-4">Examinee Details</CTableHeaderCell>
-              <CTableHeaderCell>Student ID / Code</CTableHeaderCell>
+              <CTableHeaderCell className="ps-4">Applicant Details</CTableHeaderCell>
+              <CTableHeaderCell> Applicant Code</CTableHeaderCell>
               <CTableHeaderCell>Department</CTableHeaderCell>
               <CTableHeaderCell>Exam Status</CTableHeaderCell>
               <CTableHeaderCell>Score</CTableHeaderCell>
@@ -118,7 +147,7 @@ const Applicants = () => {
                 <CTableDataCell colSpan={6} className="text-center text-body-secondary py-5">
                   <CIcon icon={cilPeople} size="3xl" className="mb-2" />
                   <div>
-                    No examinees{' '}
+                    No applicants{' '}
                     {selectedExam.applicants.length
                       ? 'match these filters'
                       : 'registered for this schedule yet'}
@@ -132,7 +161,7 @@ const Applicants = () => {
                 <CTableDataCell className="ps-4">
                   <div className="d-flex align-items-center gap-3">
                     <CAvatar color="secondary" size="md">
-                      {e.name.charAt(0)}
+                      {e.name?.charAt(0) ?? '?'}
                     </CAvatar>
                     <div>
                       <div className="fw-bold">{e.name}</div>
@@ -140,10 +169,12 @@ const Applicants = () => {
                     </div>
                   </div>
                 </CTableDataCell>
-                <CTableDataCell className="font-monospace">{e.studentId}</CTableDataCell>
+                <CTableDataCell className="font-monospace">
+                  {e.applicantCode ?? '—'}
+                </CTableDataCell>
                 <CTableDataCell>{e.department || 'N/A'}</CTableDataCell>
                 <CTableDataCell>
-                  <CBadge color={EXAMINEE_COLOR[e.status] || 'secondary'} shape="rounded-pill">
+                  <CBadge color={APPLICANT_COLOR[e.status] || 'secondary'} shape="rounded-pill">
                     {e.status}
                   </CBadge>
                 </CTableDataCell>
@@ -174,8 +205,8 @@ const Applicants = () => {
                     color="danger"
                     variant="ghost"
                     size="sm"
-                    title="Remove Examinee"
-                    onClick={() => removeExaminee(e.id)}
+                    title="Remove applicant"
+                    onClick={() => removeApplicant(e.id)}
                   >
                     <CIcon icon={cilTrash} />
                   </CButton>
@@ -186,7 +217,7 @@ const Applicants = () => {
         </CTable>
         <CCardFooter className="d-flex justify-content-between small text-body-secondary">
           <span>
-            Showing <strong className="text-body">{rows.length}</strong> examinees assigned to this
+            Showing <strong className="text-body">{rows.length}</strong> applicants assigned to this
             schedule
           </span>
           <span>Auto-saves changes</span>

@@ -12,7 +12,10 @@ const TOAST_COLOR = { success: 'success', error: 'danger', info: 'primary' }
 // this fallback just matches the endpoint you've been testing against.
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5026/api'
 const GET_EXAM_SCHEDULES_ENDPOINT = `${API_BASE_URL}/Exam/GetExamSchedules`
-const saveExamQuestionsEndpoint = (examId) => `${API_BASE_URL}/Question/${examId}/SaveQuestions`
+const saveExamQuestionsEndpoint = (examId) => `${API_BASE_URL}/Exam/${examId}/SaveQuestions`
+const enrollApplicantsEndpoint = (examId) => `${API_BASE_URL}/Applicant/${examId}/EnrollApplicants`
+const removeEnrollmentEndpoint = (examId, enrollmentId) =>
+  `${API_BASE_URL}/Exam/${examId}/Enrollments/${enrollmentId}`
 
 // Duplicated from ExamModals.jsx rather than imported — there's no shared
 // api-utils module yet. Worth extracting once a third place needs it.
@@ -36,7 +39,7 @@ const extractErrorMessage = async (response, fallback) => {
 // API returns them — I haven't seen their real field names beyond what you
 // pasted (both arrays were empty in your sample), so if Examinees.jsx /
 // Builder.jsx expect something other than what the API actually sends
-// (e.g. an `applicantId` vs `studentId` mismatch), that'll need a matching
+// (e.g. an `applicantId` vs `applicantCode` mismatch), that'll need a matching
 // fix once there's a non-empty response to check against.
 const normalizeExam = (apiExam) => ({
   ...apiExam,
@@ -112,13 +115,13 @@ export const ExamProvider = ({ children }) => {
       toast('Exam Schedule successfully created!', 'success')
     },
     refetchExams: fetchExams,
-    // NOTE: everything below this line (and every action after it) only
-    // mutates local React state — there's no DELETE/PATCH/PUT endpoint
-    // wired up for any of it yet. That was fine when `exams` was a
-    // hardcoded array, but now that it's loaded from the database, none of
-    // these changes persist: a refetch (reload, or creating another exam)
-    // will silently bring back whatever the server still has. Treat these
-    // as UI-only until matching endpoints exist.
+    // NOTE: deleteExam here, and saveQuestionnaire (title/instructions
+    // only — saveQuestions itself is real) further down, still only mutate
+    // local React state — no DELETE/PATCH endpoint wired up for either yet.
+    // Same caveat as before: a refetch will silently discard whatever of
+    // these hasn't actually been persisted. The Applicants actions, further
+    // down still, are no longer in this category — EnrollApplicants and the
+    // enrollment DELETE endpoint are both real now.
     deleteExam: (id) => {
       if (exams.length <= 1)
         return toast('At least one exam schedule must remain in the system demo.', 'error')
@@ -238,22 +241,67 @@ export const ExamProvider = ({ children }) => {
             : { ...o, isCorrect: i === idx },
         ),
       })),
-    // Applicants (renamed from Examinees to match the new terminology and
-    // the API's `applicants` key)
-    addApplicants: (list, message) => {
-      patchSelected((e) => ({
-        ...e,
-        applicants: [
-          ...e.applicants,
-          ...list.map((p) => ({ id: uid('applicant'), status: 'Invited', score: null, ...p })),
-        ],
-      }))
-      toast(message, 'success')
+    // Applicants — now backed by a real endpoint (EnrollApplicants), same
+    // "POST, then refetch" pattern as addExam/saveQuestions, for the same
+    // reason: a locally-fabricated roster row would carry a uid('applicant')
+    // placeholder id, not the server's real ExamEnrollmentId.
+    //
+    // `message` is kept as a fallback for callers (ExamModals.jsx) that
+    // build their own success text, but the server's own message — which
+    // reflects real enrolled/skipped-as-duplicate counts — is preferred
+    // when present.
+    //
+    // ASSUMPTION: the backend DTO's field is `applicantNumber`, mapped here
+    // from the UI's existing `applicantCode` field so ExamModals.jsx doesn't
+    // need another rename. Confirm against your actual Applicant entity —
+    // if it's still `applicantCode` (or something else) on the wire, change the
+    // key below.
+    addApplicants: async (list, message) => {
+      if (!selectedExam) return
+      const payload = {
+        applicants: list.map((p) => ({
+          name: p.name,
+          email: p.email,
+          applicantCode: p.applicantCode,
+        })),
+      }
+      try {
+        const response = await fetch(enrollApplicantsEndpoint(selectedExam.id), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        if (!response.ok) {
+          throw new Error(await extractErrorMessage(response, 'Failed to enroll applicants.'))
+        }
+        const result = await response.json().catch(() => null)
+        await fetchExams()
+        toast(result?.message ?? message, 'success')
+      } catch (error) {
+        console.error('Failed to enroll applicants:', error)
+        toast(error.message || 'Failed to enroll applicants.', 'error')
+      }
     },
-    removeApplicant: (id) => {
-      patchSelected((e) => ({ ...e, applicants: e.applicants.filter((x) => x.id !== id) }))
-      toast('Applicant removed from roster.', 'info')
+    // `id` here must be a real ExamEnrollmentId — true for anything
+    // currently in selectedExam.applicants, since addApplicants above always
+    // refetches before a new entry is shown.
+    removeApplicant: async (id) => {
+      if (!selectedExam) return
+      try {
+        const response = await fetch(removeEnrollmentEndpoint(selectedExam.id, id), {
+          method: 'DELETE',
+        })
+        if (!response.ok) {
+          throw new Error(await extractErrorMessage(response, 'Failed to remove applicant from roster.'))
+        }
+        await fetchExams()
+        toast('Applicant removed from roster.', 'info')
+      } catch (error) {
+        console.error('Failed to remove applicant:', error)
+        toast(error.message || 'Failed to remove applicant from roster.', 'error')
+      }
     },
+    // Still local-only — no email-sending endpoint exists yet.
     resendInvite: (email) => toast(`Invitation & access pass code re-sent to ${email}`, 'success'),
   }
 
