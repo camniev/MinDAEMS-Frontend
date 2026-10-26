@@ -87,8 +87,8 @@ const validateExam = (f) => {
   if (!f.examDate) errors.examDate = 'Scheduled date is required.'
   else if (f.examDate < todayISO()) errors.examDate = 'Date cannot be in the past.'
   if (!f.startTime) errors.startTime = 'Start time is required.'
-  const durationMinutes = Number(f.durationMinutes)
-  if (!Number.isFinite(durationMinutes) || durationMinutes < 5) errors.durationMinutes = 'Duration must be at least 5 minutes.'
+  const durationMinutes = Number(f.durationMinutesMinutes)
+  if (!Number.isFinite(durationMinutes) || durationMinutes < 5) errors.durationMinutesMinutes = 'Duration must be at least 5 minutes.'
   const passingScore = Number(f.passingScore)
   if (!Number.isFinite(passingScore) || passingScore < 1 || passingScore > 100)
     errors.passingScore = 'Passing score must be between 1 and 100.'
@@ -134,7 +134,7 @@ const CreateExamModal = () => {
       examDate: f.examDate,
       // normalize "HH:MM" from <input type="time"> to "HH:MM:SS" for .NET TimeOnly
       startTime: f.startTime.length === 5 ? `${f.startTime}:00` : f.startTime,
-      durationMinutes: Number(f.durationMinutes),
+      durationMinutes: Number(f.durationMinutesMinutes),
       passingScore: Number(f.passingScore),
       instructions: f.instructions.trim(),
       userId: USER_ID,
@@ -243,10 +243,10 @@ const CreateExamModal = () => {
               <CFormInput
                 type="number"
                 min={5}
-                value={f.duration}
+                value={f.durationMinutes}
                 onChange={set('duration')}
-                invalid={!!errors.duration}
-                feedbackInvalid={errors.duration}
+                invalid={!!errors.durationMinutes}
+                feedbackInvalid={errors.durationMinutes}
                 disabled={isSubmitting}
               />
             </CCol>
@@ -453,7 +453,7 @@ const AddExamineeModal = () => {
               Cancel
             </CButton>
             <CButton color="primary" type="submit">
-              Add Examinee
+              Add Applicant
             </CButton>
           </CModalFooter>
         </CForm>
@@ -491,7 +491,7 @@ const AddExamineeModal = () => {
 const pad = (n) => String(n).padStart(2, '0')
 
 const PreviewPaper = ({ exam, onSubmit }) => {
-  const [secs, setSecs] = useState(Math.max(exam.duration, 0) * 60)
+  const [secs, setSecs] = useState(Math.max(exam.durationMinutes, 0) * 60)
   const [locked, setLocked] = useState(false)
   const lockedRef = useRef(false)
   const onSubmitRef = useRef(onSubmit)
@@ -505,7 +505,7 @@ const PreviewPaper = ({ exam, onSubmit }) => {
   }
 
   useEffect(() => {
-    if (exam.duration <= 0) return undefined
+    if (exam.durationMinutes <= 0) return undefined
     const t = setInterval(() => {
       setSecs((s) => {
         if (s <= 1) {
@@ -518,7 +518,7 @@ const PreviewPaper = ({ exam, onSubmit }) => {
     }, 1000)
     return () => clearInterval(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exam.duration])
+  }, [exam.durationMinutes])
 
   const total = exam.questions.reduce((n, q) => n + q.points, 0)
   const timeUp = secs <= 0
@@ -549,7 +549,7 @@ const PreviewPaper = ({ exam, onSubmit }) => {
           <CCardBody>
             <h4>{exam.examTitle}</h4>
             <div className="small text-body-secondary">
-              Course: {exam.subject} • Duration: {exam.duration} Mins
+              Course: {exam.subject} • Duration: {exam.durationMinutes} Mins
             </div>
             <CAlert color="primary" className="small mt-3 mb-0">
               <strong>Instructions:</strong>{' '}

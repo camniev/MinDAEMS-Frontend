@@ -206,7 +206,7 @@ const Applicants = () => {
                     variant="ghost"
                     size="sm"
                     title="Remove applicant"
-                    onClick={() => removeApplicant(e.id)}
+                    onClick={() => removeApplicant(e.examEnrollmentId)}
                   >
                     <CIcon icon={cilTrash} />
                   </CButton>

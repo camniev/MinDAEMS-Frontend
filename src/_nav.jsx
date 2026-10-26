@@ -40,7 +40,7 @@ const buildNav = ({ upcoming, openCreate, openPreview }) => [
   },
   {
     component: CNavItem,
-    name: 'Student Exam Preview',
+    name: 'Applicant Exam Preview',
     onClick: () => openPreview(),
     icon: <CIcon icon={cilMediaPlay} customClassName="nav-icon" />,
   },

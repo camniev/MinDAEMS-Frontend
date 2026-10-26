@@ -14,8 +14,8 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5026
 const GET_EXAM_SCHEDULES_ENDPOINT = `${API_BASE_URL}/Exam/GetExamSchedules`
 const saveExamQuestionsEndpoint = (examId) => `${API_BASE_URL}/Exam/${examId}/SaveQuestions`
 const enrollApplicantsEndpoint = (examId) => `${API_BASE_URL}/Applicant/${examId}/EnrollApplicants`
-const removeEnrollmentEndpoint = (examId, enrollmentId) =>
-  `${API_BASE_URL}/Exam/${examId}/Enrollments/${enrollmentId}`
+const removeEnrollmentEndpoint = (examId, examEnrollmentId) =>
+  `${API_BASE_URL}/Applicant/${examId}/Enrollments/${examEnrollmentId}`
 
 // Duplicated from ExamModals.jsx rather than imported — there's no shared
 // api-utils module yet. Worth extracting once a third place needs it.
