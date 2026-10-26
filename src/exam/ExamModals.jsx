@@ -397,7 +397,7 @@ const AddExamineeModal = () => {
   return (
     <CModal visible={addApplicantOpen} onShow={handleShow} onClose={closeAddApplicant} alignment="center">
       <CModalHeader>
-        <CModalTitle>Add Examinees to Schedule</CModalTitle>
+        <CModalTitle>Add Applicants to Schedule</CModalTitle>
       </CModalHeader>
       <CNav variant="tabs" layout="fill">
         <CNavItem>
@@ -460,9 +460,9 @@ const AddExamineeModal = () => {
       ) : (
         <CForm noValidate onSubmit={bulkSubmit}>
           <CModalBody>
-            <CFormLabel>Paste Bulk Examinee Records</CFormLabel>
+            <CFormLabel>Paste Bulk Applicant Records</CFormLabel>
             <p className="small text-body-secondary">
-              Format line by line: <code>Full Name, Email, Applicant Code</code>. Blank ones get a generated ID and &quot;General&quot;.
+              Format line by line: <code>Full Name, Email, Applicant Code</code>.
             </p>
             <CFormTextarea
               rows={6}
@@ -470,7 +470,7 @@ const AddExamineeModal = () => {
               value={bulk}
               onChange={(e) => setBulk(e.target.value)}
               placeholder={
-                'John Doe, john@univ.edu, STU-101, CS\nJane Smith, jane@univ.edu, STU-102, CS\nMark Lee, mark@univ.edu, STU-103, Engineering'
+                'Juan dela Cruz, juan.delacruz@gmail.com, DMO_I_KMD_00001\nJane Doe, jane.doe@gmail.com, DMO_I_KMD_00002\nCharles Smith, charles.smith@gmail.com, DMO_I_KMD_00003'
               }
             />
           </CModalBody>
