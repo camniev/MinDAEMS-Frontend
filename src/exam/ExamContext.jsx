@@ -12,7 +12,7 @@ const TOAST_COLOR = { success: 'success', error: 'danger', info: 'primary' }
 // this fallback just matches the endpoint you've been testing against.
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5026/api'
 const GET_EXAM_SCHEDULES_ENDPOINT = `${API_BASE_URL}/Exam/GetExamSchedules`
-const saveExamQuestionsEndpoint = (examId) => `${API_BASE_URL}/Exam/${examId}/SaveQuestions`
+const saveExamQuestionsEndpoint = (examId) => `${API_BASE_URL}/Question/${examId}/SaveQuestions`
 const enrollApplicantsEndpoint = (examId) => `${API_BASE_URL}/Applicant/${examId}/EnrollApplicants`
 const removeEnrollmentEndpoint = (examId, examEnrollmentId) =>
   `${API_BASE_URL}/Applicant/${examId}/Enrollments/${examEnrollmentId}`
@@ -132,7 +132,7 @@ export const ExamProvider = ({ children }) => {
     // Title/instructions still has no backing endpoint — still local-only.
     saveQuestionnaire: (examTitle, instructions) => {
       patchSelected((e) => ({ ...e, examTitle, instructions }))
-      toast('Questionnaire details saved locally (not yet persisted to the server).', 'success')
+      //toast('Questionnaire details saved locally (not yet persisted to the server).', 'success')
     },
     // Questions, on the other hand, now have a real endpoint. This sends
     // the exam's *entire current question list* — the server replaces
@@ -265,6 +265,7 @@ export const ExamProvider = ({ children }) => {
           applicantCode: p.applicantCode,
         })),
       }
+      console.log(JSON.stringify(payload))
       try {
         const response = await fetch(enrollApplicantsEndpoint(selectedExam.id), {
           method: 'POST',

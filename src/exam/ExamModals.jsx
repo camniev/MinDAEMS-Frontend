@@ -87,8 +87,8 @@ const validateExam = (f) => {
   if (!f.examDate) errors.examDate = 'Scheduled date is required.'
   else if (f.examDate < todayISO()) errors.examDate = 'Date cannot be in the past.'
   if (!f.startTime) errors.startTime = 'Start time is required.'
-  const durationMinutes = Number(f.durationMinutesMinutes)
-  if (!Number.isFinite(durationMinutes) || durationMinutes < 5) errors.durationMinutesMinutes = 'Duration must be at least 5 minutes.'
+  const durationMinutes = Number(f.durationMinutes)
+  if (!Number.isFinite(durationMinutes) || durationMinutes < 5) errors.durationMinutes = 'Duration must be at least 5 minutes.'
   const passingScore = Number(f.passingScore)
   if (!Number.isFinite(passingScore) || passingScore < 1 || passingScore > 100)
     errors.passingScore = 'Passing score must be between 1 and 100.'
@@ -134,11 +134,13 @@ const CreateExamModal = () => {
       examDate: f.examDate,
       // normalize "HH:MM" from <input type="time"> to "HH:MM:SS" for .NET TimeOnly
       startTime: f.startTime.length === 5 ? `${f.startTime}:00` : f.startTime,
-      durationMinutes: Number(f.durationMinutesMinutes),
+      durationMinutes: Number(f.durationMinutes),
       passingScore: Number(f.passingScore),
       instructions: f.instructions.trim(),
       userId: USER_ID,
     }
+
+    console.log(JSON.stringify(payload))
 
     setIsSubmitting(true)
     try {
@@ -244,7 +246,7 @@ const CreateExamModal = () => {
                 type="number"
                 min={5}
                 value={f.durationMinutes}
-                onChange={set('duration')}
+                onChange={set('durationMinutes')}
                 invalid={!!errors.durationMinutes}
                 feedbackInvalid={errors.durationMinutes}
                 disabled={isSubmitting}

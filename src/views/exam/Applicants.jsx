@@ -135,7 +135,6 @@ const Applicants = () => {
             <CTableRow>
               <CTableHeaderCell className="ps-4">Applicant Details</CTableHeaderCell>
               <CTableHeaderCell> Applicant Code</CTableHeaderCell>
-              <CTableHeaderCell>Department</CTableHeaderCell>
               <CTableHeaderCell>Exam Status</CTableHeaderCell>
               <CTableHeaderCell>Score</CTableHeaderCell>
               <CTableHeaderCell className="text-end pe-4">Actions</CTableHeaderCell>
@@ -172,7 +171,6 @@ const Applicants = () => {
                 <CTableDataCell className="font-monospace">
                   {e.applicantCode ?? '—'}
                 </CTableDataCell>
-                <CTableDataCell>{e.department || 'N/A'}</CTableDataCell>
                 <CTableDataCell>
                   <CBadge color={APPLICANT_COLOR[e.status] || 'secondary'} shape="rounded-pill">
                     {e.status}
