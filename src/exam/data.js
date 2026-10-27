@@ -10,7 +10,15 @@ export const QUESTION_TYPES = {
   essay: 'Short Answer / Essay',
 }
 
-export const STATUS_COLOR = { Active: 'success', Upcoming: 'primary', Completed: 'secondary' }
+// Matches the four exam-schedule statuses the backend now computes/stores
+// (see ExamContext.jsx's EXAM_STATUSES): Upcoming/Ongoing/Closed are
+// time-derived, Archived is a manual soft-delete.
+export const STATUS_COLOR = {
+  Upcoming: 'primary',
+  Ongoing: 'success',
+  Closed: 'secondary',
+  Archived: 'dark',
+}
 
 // Renamed from EXAMINEE_COLOR to match the applicant terminology.
 export const APPLICANT_COLOR = {

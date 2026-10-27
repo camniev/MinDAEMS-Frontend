@@ -40,7 +40,7 @@ const Stat = ({ label, value, note, icon, color, noteColor }) => (
 const Dashboard = () => {
   const navigate = useNavigate()
   const { exams, setSelectedId, openCreate, openPreview } = useExam()
-  const active = exams.find((e) => e.status === 'Active')
+  const active = exams.find((e) => e.status === 'Ongoing')
   const upcoming = exams.filter((e) => e.status === 'Upcoming').length
   const totalApplicants = exams.reduce((n, e) => n + e.applicants.length, 0)
 
@@ -69,7 +69,7 @@ const Dashboard = () => {
       color: 'warning',
       title: 'Import Applicants',
       sub: 'Single or bulk text import',
-      onClick: () => navigate('/applicants'), // route path left as-is — confirm with routes.js/_nav.jsx before renaming
+      onClick: () => navigate('/examinees'), // route path left as-is — confirm with routes.js/_nav.jsx before renaming
     },
   ]
 
@@ -79,7 +79,7 @@ const Dashboard = () => {
         <CCol sm={6} lg={3}>
           <Stat
             label="Active Exams"
-            value={exams.filter((e) => e.status === 'Active').length}
+            value={exams.filter((e) => e.status === 'Ongoing').length}
             icon={cilSignalCellular4}
             color="success"
             noteColor="success"
@@ -162,7 +162,7 @@ const Dashboard = () => {
                       color="light"
                       variant="outline"
                       size="sm"
-                      onClick={() => go(active.id, '/applicants')}
+                      onClick={() => go(active.id, '/examinees')}
                     >
                       <CIcon icon={cilPeople} className="me-1" /> Applicant Roster
                     </CButton>

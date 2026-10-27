@@ -16,6 +16,15 @@ const saveExamQuestionsEndpoint = (examId) => `${API_BASE_URL}/Question/${examId
 const enrollApplicantsEndpoint = (examId) => `${API_BASE_URL}/Applicant/${examId}/EnrollApplicants`
 const removeEnrollmentEndpoint = (examId, examEnrollmentId) =>
   `${API_BASE_URL}/Applicant/${examId}/Enrollments/${examEnrollmentId}`
+const archiveExamEndpoint = (examId) => `${API_BASE_URL}/Exam/${examId}/Archive`
+const restoreExamEndpoint = (examId) => `${API_BASE_URL}/Exam/${examId}/Restore`
+
+// Canonical status strings, matching what GetExamSchedules now computes.
+// Upcoming/Ongoing/Closed are derived server-side from date/time; Archived
+// is a manual, persisted override. Kept here so other files (data.js's
+// STATUS_COLOR, any status filter UI) have one place to import from instead
+// of re-typing these strings.
+export const EXAM_STATUSES = ['Upcoming', 'Ongoing', 'Closed', 'Archived']
 
 // Duplicated from ExamModals.jsx rather than imported — there's no shared
 // api-utils module yet. Worth extracting once a third place needs it.
@@ -50,6 +59,7 @@ export const ExamProvider = ({ children }) => {
   const [exams, setExams] = useState([])
   const [examsLoading, setExamsLoading] = useState(true)
   const [examsError, setExamsError] = useState(null)
+  const [includeArchived, setIncludeArchived] = useState(false)
   const [selectedId, setSelectedId] = useState(null)
   const [search, setSearch] = useState('')
   const [toasts, setToasts] = useState([])
@@ -67,7 +77,10 @@ export const ExamProvider = ({ children }) => {
     setExamsLoading(true)
     setExamsError(null)
     try {
-      const response = await fetch(GET_EXAM_SCHEDULES_ENDPOINT)
+      const url = includeArchived
+        ? `${GET_EXAM_SCHEDULES_ENDPOINT}?includeArchived=true`
+        : GET_EXAM_SCHEDULES_ENDPOINT
+      const response = await fetch(url)
       if (!response.ok) throw new Error(`Failed to load exam schedules (status ${response.status}).`)
       const payload = await response.json()
       if (!isMounted.current) return
@@ -80,7 +93,7 @@ export const ExamProvider = ({ children }) => {
     } finally {
       if (isMounted.current) setExamsLoading(false)
     }
-  }, [toast])
+  }, [includeArchived, toast])
 
   useEffect(() => {
     fetchExams()
@@ -115,19 +128,43 @@ export const ExamProvider = ({ children }) => {
       toast('Exam Schedule successfully created!', 'success')
     },
     refetchExams: fetchExams,
-    // NOTE: deleteExam here, and saveQuestionnaire (title/instructions
-    // only — saveQuestions itself is real) further down, still only mutate
-    // local React state — no DELETE/PATCH endpoint wired up for either yet.
-    // Same caveat as before: a refetch will silently discard whatever of
-    // these hasn't actually been persisted. The Applicants actions, further
-    // down still, are no longer in this category — EnrollApplicants and the
-    // enrollment DELETE endpoint are both real now.
-    deleteExam: (id) => {
-      if (exams.length <= 1)
-        return toast('At least one exam schedule must remain in the system demo.', 'error')
-      setExams((xs) => xs.filter((e) => e.id !== id))
-      toast('Exam Schedule removed locally (not yet persisted to the server).', 'info')
+    // "Delete" is soft — this is the Archived status, not a hard DELETE.
+    // Archived exams drop out of the default fetch (includeArchived above),
+    // so this is also what makes an exam disappear from the main schedules
+    // list; restoreExam brings it back.
+    archiveExam: async (id, userId) => {
+      try {
+        const response = await fetch(archiveExamEndpoint(id), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: userId ?? null }),
+        })
+        if (!response.ok) {
+          throw new Error(await extractErrorMessage(response, 'Failed to archive exam schedule.'))
+        }
+        await fetchExams()
+        toast('Exam schedule archived.', 'info')
+      } catch (error) {
+        console.error('Failed to archive exam schedule:', error)
+        toast(error.message || 'Failed to archive exam schedule.', 'error')
+      }
     },
+    restoreExam: async (id) => {
+      try {
+        const response = await fetch(restoreExamEndpoint(id), { method: 'PATCH' })
+        if (!response.ok) {
+          throw new Error(await extractErrorMessage(response, 'Failed to restore exam schedule.'))
+        }
+        await fetchExams()
+        toast('Exam schedule restored.', 'success')
+      } catch (error) {
+        console.error('Failed to restore exam schedule:', error)
+        toast(error.message || 'Failed to restore exam schedule.', 'error')
+      }
+    },
+    // NOTE: saveQuestionnaire (title/instructions only — saveQuestions
+    // itself is real) and every question/option action below it still only
+    // mutate local React state — no backing endpoint for those yet.
     // Builder
     // Title/instructions still has no backing endpoint — still local-only.
     saveQuestionnaire: (examTitle, instructions) => {
@@ -265,7 +302,6 @@ export const ExamProvider = ({ children }) => {
           applicantCode: p.applicantCode,
         })),
       }
-      console.log(JSON.stringify(payload))
       try {
         const response = await fetch(enrollApplicantsEndpoint(selectedExam.id), {
           method: 'POST',
@@ -311,6 +347,8 @@ export const ExamProvider = ({ children }) => {
       exams,
       examsLoading,
       examsError,
+      includeArchived,
+      setIncludeArchived,
       selectedExam,
       setSelectedId,
       search,
@@ -328,7 +366,18 @@ export const ExamProvider = ({ children }) => {
       closePreview: () => setPreviewId(null),
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [exams, examsLoading, examsError, selectedId, search, createOpen, addApplicantOpen, previewId, toast],
+    [
+      exams,
+      examsLoading,
+      examsError,
+      includeArchived,
+      selectedId,
+      search,
+      createOpen,
+      addApplicantOpen,
+      previewId,
+      toast,
+    ],
   )
 
   return (

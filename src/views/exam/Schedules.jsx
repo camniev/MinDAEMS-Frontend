@@ -11,9 +11,12 @@ import {
   cilPencil,
   cilPlus,
   cilTrash,
+  cilFolder,
 } from '@coreui/icons'
 import { useExam } from 'src/exam/ExamContext'
 import { STATUS_COLOR } from 'src/exam/data'
+
+const USER_ID = '24fefc6e-ed0a-4e2e-95f3-9e448928e31d'
 
 const FILTERS = [
   ['all', 'All Schedules'],
@@ -24,7 +27,7 @@ const FILTERS = [
 
 const Schedules = () => {
   const navigate = useNavigate()
-  const { exams, search, setSelectedId, openCreate, deleteExam } = useExam()
+  const { exams, search, setSelectedId, openCreate, archiveExam } = useExam()
   const [filter, setFilter] = useState('all')
 
   const q = search.trim().toLowerCase()
@@ -88,7 +91,7 @@ const Schedules = () => {
                       </li>
                       <li>
                         <CIcon icon={cilClock} className="text-primary me-2" />
-                        {e.duration} Minutes Duration
+                        {e.durationMinutes} Minutes Duration
                       </li>
                       <li>
                         <CIcon icon={cilLockLocked} className="text-primary me-2" />
@@ -123,12 +126,24 @@ const Schedules = () => {
                       >
                         <CIcon icon={cilPeople} /> Roster
                       </CButton>
+                      {/* {e.status === "Completed"
+                        ? <CButton
+                            color="light"
+                            size="sm"
+                            className="text-danger"
+                            title="Archive Schedule"
+                            onClick={() => archiveExam(e.id, USER_ID)}
+                          >
+                            <CIcon icon={cilTrash} />
+                          </CButton>
+                        : ''
+                      } */}
                       <CButton
                         color="light"
                         size="sm"
                         className="text-danger"
-                        title="Delete Schedule"
-                        onClick={() => deleteExam(e.id)}
+                        title="Archive Schedule"
+                        onClick={() => archiveExam(e.id, USER_ID)}
                       >
                         <CIcon icon={cilTrash} />
                       </CButton>
