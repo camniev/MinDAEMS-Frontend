@@ -18,13 +18,15 @@ const removeEnrollmentEndpoint = (examId, examEnrollmentId) =>
   `${API_BASE_URL}/Applicant/${examId}/Enrollments/${examEnrollmentId}`
 const archiveExamEndpoint = (examId) => `${API_BASE_URL}/Exam/${examId}/Archive`
 const restoreExamEndpoint = (examId) => `${API_BASE_URL}/Exam/${examId}/Restore`
+const openExamEndpoint = (examId) => `${API_BASE_URL}/Exam/${examId}/Open`
+const closeExamEndpoint = (examId) => `${API_BASE_URL}/Exam/${examId}/Close`
 
 // Canonical status strings, matching what GetExamSchedules now computes.
 // Upcoming/Ongoing/Closed are derived server-side from date/time; Archived
 // is a manual, persisted override. Kept here so other files (data.js's
 // STATUS_COLOR, any status filter UI) have one place to import from instead
 // of re-typing these strings.
-export const EXAM_STATUSES = ['Upcoming', 'Ongoing', 'Closed', 'Archived']
+export const EXAM_STATUSES = ['Upcoming', 'Ongoing', 'Closed', 'Completed', 'Archived']
 
 // Duplicated from ExamModals.jsx rather than imported — there's no shared
 // api-utils module yet. Worth extracting once a third place needs it.
@@ -160,6 +162,37 @@ export const ExamProvider = ({ children }) => {
       } catch (error) {
         console.error('Failed to restore exam schedule:', error)
         toast(error.message || 'Failed to restore exam schedule.', 'error')
+      }
+    },
+    // Upcoming -> Ongoing is now a deliberate action, not something that
+    // happens on its own when the clock reaches the scheduled start time.
+    openExam: async (id) => {
+      try {
+        const response = await fetch(openExamEndpoint(id), { method: 'PATCH' })
+        if (!response.ok) {
+          throw new Error(await extractErrorMessage(response, 'Failed to open exam schedule.'))
+        }
+        await fetchExams()
+        toast('Exam schedule opened.', 'success')
+      } catch (error) {
+        console.error('Failed to open exam schedule:', error)
+        toast(error.message || 'Failed to open exam schedule.', 'error')
+      }
+    },
+    // Ending an exam early. Note this is NOT the only way an exam reaches
+    // Closed — the server also auto-closes an Ongoing exam once its
+    // scheduled window has passed, with no action needed here for that case.
+    closeExam: async (id) => {
+      try {
+        const response = await fetch(closeExamEndpoint(id), { method: 'PATCH' })
+        if (!response.ok) {
+          throw new Error(await extractErrorMessage(response, 'Failed to close exam schedule.'))
+        }
+        await fetchExams()
+        toast('Exam schedule closed.', 'info')
+      } catch (error) {
+        console.error('Failed to close exam schedule:', error)
+        toast(error.message || 'Failed to close exam schedule.', 'error')
       }
     },
     // NOTE: saveQuestionnaire (title/instructions only — saveQuestions

@@ -12,6 +12,9 @@ import {
   cilPlus,
   cilTrash,
   cilFolder,
+  cilMediaPlay,
+  cilXCircle,
+  cilArrowTop,
 } from '@coreui/icons'
 import { useExam } from 'src/exam/ExamContext'
 import { STATUS_COLOR } from 'src/exam/data'
@@ -20,20 +23,40 @@ const USER_ID = '24fefc6e-ed0a-4e2e-95f3-9e448928e31d'
 
 const FILTERS = [
   ['all', 'All Schedules'],
-  ['Active', 'Active Now'],
   ['Upcoming', 'Upcoming'],
-  ['Completed', 'Completed'],
+  ['Ongoing', 'Ongoing'],
+  ['Closed', 'Closed'],
+  ['Archived', 'Archived'],
 ]
 
 const Schedules = () => {
   const navigate = useNavigate()
-  const { exams, search, setSelectedId, openCreate, archiveExam } = useExam()
+  const {
+    exams,
+    search,
+    setSelectedId,
+    openCreate,
+    archiveExam,
+    restoreExam,
+    openExam,
+    closeExam,
+    setIncludeArchived,
+  } = useExam()
   const [filter, setFilter] = useState('all')
+
+  // Archived exams are excluded from the default fetch, so the Archived tab
+  // needs to ask for them specifically. Every other tab switches it back
+  // off — see the note on this in the write-up, this is a shared piece of
+  // context state, not scoped to just this page.
+  const handleFilterChange = (key) => {
+    setFilter(key)
+    setIncludeArchived(key === 'Archived')
+  }
 
   const q = search.trim().toLowerCase()
   const list = exams
     .filter((e) => filter === 'all' || e.status === filter)
-    .filter((e) => !q || `${e.examTitle} ${e.subject} ${e.examCode}`.toLowerCase().includes(q))
+    .filter((e) => !q || `${e.examTitle} ${e.examCode}`.toLowerCase().includes(q))
 
   const go = (id, path) => {
     setSelectedId(id)
@@ -51,8 +74,9 @@ const Schedules = () => {
                 size="sm"
                 color="primary"
                 variant={filter === key ? undefined : 'outline'}
-                onClick={() => setFilter(key)}
+                onClick={() => handleFilterChange(key)}
               >
+                {key === 'Archived' && <CIcon icon={cilFolder} size="sm" className="me-1" />}
                 {label}
               </CButton>
             ))}
@@ -77,17 +101,19 @@ const Schedules = () => {
               <CCard className="h-100">
                 <CCardBody className="d-flex flex-column justify-content-between">
                   <div>
-                    <div className="d-flex justify-content-between align-items-center mb-2">
-                      <span className="small fw-bold text-primary text-uppercase">{e.subject}</span>
+                    {/* subject (the old category tag) no longer exists on
+                        the exam record — nothing meaningful to show on the
+                        left here anymore, so the badge now sits alone. */}
+                    <div className="d-flex justify-content-end align-items-center mb-2">
                       <CBadge color={STATUS_COLOR[e.status]} shape="rounded-pill">
-                        {e.status === 'Active' ? '● Active Now' : e.status}
+                        {e.status === 'Ongoing' ? '● Ongoing' : e.status}
                       </CBadge>
                     </div>
                     <h5>{e.examTitle}</h5>
                     <ul className="list-unstyled small mt-3 mb-0 d-grid gap-2">
                       <li>
                         <CIcon icon={cilCalendar} className="text-primary me-2" />
-                        {e.date} at {e.startTime}
+                        {e.examDate} at {e.startTime}
                       </li>
                       <li>
                         <CIcon icon={cilClock} className="text-primary me-2" />
@@ -107,7 +133,7 @@ const Schedules = () => {
                   <div className="d-flex justify-content-between align-items-center border-top pt-3 mt-4">
                     <span className="small text-body-secondary">
                       <CIcon icon={cilPeople} className="me-1" />
-                      {e.applicants.length} Students
+                      {e.applicants.length} Applicants
                     </span>
                     <div className="d-flex gap-1">
                       <CButton
@@ -126,27 +152,56 @@ const Schedules = () => {
                       >
                         <CIcon icon={cilPeople} /> Roster
                       </CButton>
-                      {/* {e.status === "Completed"
-                        ? <CButton
-                            color="light"
-                            size="sm"
-                            className="text-danger"
-                            title="Archive Schedule"
-                            onClick={() => archiveExam(e.id, USER_ID)}
-                          >
-                            <CIcon icon={cilTrash} />
-                          </CButton>
-                        : ''
-                      } */}
-                      <CButton
-                        color="light"
-                        size="sm"
-                        className="text-danger"
-                        title="Archive Schedule"
-                        onClick={() => archiveExam(e.id, USER_ID)}
-                      >
-                        <CIcon icon={cilTrash} />
-                      </CButton>
+
+                      {/* Open/Close mirror the backend's own rules: Open only
+                          applies to Upcoming, Close only to Ongoing — this
+                          just avoids offering a button that would 409. */}
+                      {e.status === 'Upcoming' && (
+                        <CButton
+                          color="light"
+                          size="sm"
+                          className="text-success"
+                          title="Open Exam"
+                          onClick={() => openExam(e.id)}
+                        >
+                          <CIcon icon={cilMediaPlay} />
+                        </CButton>
+                      )}
+                      {e.status === 'Ongoing' && (
+                        <CButton
+                          color="light"
+                          size="sm"
+                          className="text-warning"
+                          title="Close Exam"
+                          onClick={() => closeExam(e.id)}
+                        >
+                          <CIcon icon={cilXCircle} />
+                        </CButton>
+                      )}
+
+                      {/* Archive is available from any non-archived status;
+                          Archived schedules get Restore instead. */}
+                      {e.status === 'Archived' ? (
+                        <CButton
+                          color="light"
+                          size="sm"
+                          className="text-primary"
+                          title="Restore Schedule"
+                          onClick={() => restoreExam(e.id)}
+                        >
+                          <CIcon icon={cilArrowTop} />
+                        </CButton>
+                      ) : (
+                        <CButton
+                          color="light"
+                          size="sm"
+                          className="text-danger"
+                          title="Archive Schedule"
+                          onClick={() => archiveExam(e.id, USER_ID)}
+                        >
+                          <CIcon icon={cilTrash} />
+                        </CButton>
+                      )}
                     </div>
                   </div>
                 </CCardBody>
