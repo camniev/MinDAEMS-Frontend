@@ -31,6 +31,12 @@ const buildNav = ({ upcoming, openCreate, openPreview }) => [
     to: '/applicants',
     icon: <CIcon icon={cilPeople} customClassName="nav-icon" />,
   },
+  {
+    component: CNavItem,
+    name: 'My Exam Schedules',
+    to: '/applicant/schedules',
+    icon: <CIcon icon={cilCalendar} customClassName="nav-icon" />,
+  },
   { component: CNavTitle, name: 'Quick Tools' },
   {
     component: CNavItem,
