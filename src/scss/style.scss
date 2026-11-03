@@ -147,8 +147,208 @@ p {
 	font-size: 15px;
 }
 
+$color_1: white;
+$color_2: #3699FF;
+$color_3: #F3F6F9;
+$color_6: #303640;
+$background-color_1: #F3F6F9;
+$form-switch-width: 2em !default;
+
+//active/hidden radio background color
+$background-color-radio_1: #e4e4e4;
+$background-color-radio_2: #83c1ff;
+
+//status font colors
+$color_4: #1BC5BD;
+$color_5: #F64E60;
+
+//status background colors
+$background-color_3: #C9F7F5;
+$background-color_4: #ffcece;
+
+//form css
+$main-color: #6c5ce7;
+$secondary-color: #a29bfe;
+$lighter-color: #e0e0e7;
+$light-color: #b0b0c0;
+$dark-color: #52505e;
+$form-bg-color: #faf9ff;
+$font-smallest: 10px;
+$font-smaller: 14px;
+$font-bigger: 20px;
+
+//new design
+$dark-font-color: #212631;
+$dark-bg-color: #212631;
+$dark-border-color: #212631;
+
+//new button colors
+$btn-info-bg-color: #83c1ff;
+
+.fc-text-white {
+	color: white;
+}
+
+// ALIGNS
+.align-items-center {
+	align-items: center;
+}
+
+.align-items-end {
+	align-items: end;
+}
+
+// TEXT AND BACKGROUND COLORS
+.fc-text-gray {
+	color: #64748b;
+}
+
+.fc-text-violet {
+	color: #818cf8;
+}
+
+.muted-text {
+	color: #6f778d;
+}
+
+// BUTTONS
+.btn-new {
+    padding: 16px 32px;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+// .btn-close {
+// 	position: absolute;
+//     right: 20px;
+//     top: 25px;
+// }
+
+.btn-info-new {
+	border-top: 3px solid $dark-border-color;
+    border-left: 3px solid $dark-border-color;
+    border-right: 3px solid $dark-border-color;
+    border-bottom: 6px solid $dark-border-color;
+    padding: 10px 30px;
+    color: $dark-font-color;
+    background-color: $btn-info-bg-color;
+    border-radius: 10px;
+	font-weight: 600;
+
+	&:hover {
+		background-color: $color_1;
+		border-top: 3px solid $dark-border-color;
+		border-left: 3px solid $dark-border-color;
+		border-right: 3px solid $dark-border-color;
+		border-bottom: 6px solid $dark-border-color;
+	}
+
+	&:active {
+		transform: translateY(3px);
+		border-bottom: 3px solid $dark-border-color;
+	}
+}
+
+// LOGIN PAGE
+.mindaam-login-card-group {
+	.minda-logo {
+		background-image: url('../assets/images/minda-logo-inv-sys.png');
+		width: 180px;
+		height: 195px;
+		background-repeat: no-repeat;
+		background-size: cover;
+		background-position: center center;
+		margin: 0 auto;
+		border-radius: 10px;
+	}
+
+	.left-pane {
+		width: 40%;
+        background-image: url('../assets/images/bg-inv-sys.png');
+        background-size: cover;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50px 0px 0px 50px;
+        padding: 20px;
+	}
+
+	.right-pane {
+		border-radius: 0px 50px 50px 0px;
+	}
+
+	.input-group {
+		.input-group-text {
+			border: 1px solid #EEF0F8;
+			background-color: #EEF0F8;
+		}
+
+		.form-control {
+			background-color: #EEF0F8;
+			border: 1px solid #EEF0F8;
+			border-radius: 10px;
+			padding: 14px 8px;
+			font-size: 14px;
+		}
+	}
+
+	.btn-info-new, .btn-info-rev-new {
+		width: 100%;
+	}
+
+	.strike {
+		display: block;
+		text-align: center;
+		overflow: hidden;
+		white-space: nowrap;
+		margin-top: 16px;
+		margin-bottom: 8px;
+		color: #B5B5B5;
+		font-size: 12px;
+
+		> span {
+			position: relative;
+			display: inline-block;
+
+			&:before,
+			&:after {
+				content: "";
+				position: absolute;
+				top: 50%;
+				width: 7vw;
+				height: 1px;
+				background: #B5B5B5;
+			}
+
+			&:before {
+				right: 100%;
+				margin-right: 10px;
+			}
+
+			&:after {
+				left: 100%;
+				margin-left: 10px;
+			}
+		}
+	}
+}
+
+@media screen and (max-width: 1024px) {
+    .mindaam-login-card-group {
+		.left-pane {
+			width: 100%;
+			border-radius: 50px 50px 0 0;
+		}
+
+		.right-pane {
+			border-radius: 0 0 50px 50px;
+		}
+	}
+}
+
 // CARDS
 .card {
 	border: 0px;
 	border-radius: 1em;
 }
+

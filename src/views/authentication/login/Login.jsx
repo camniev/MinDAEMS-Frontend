@@ -1,113 +1,162 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
+import React, { useState, useContext, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   CButton,
   CCard,
   CCardBody,
+  CCardGroup,
   CCol,
   CContainer,
   CForm,
-  CFormCheck,
   CFormInput,
-  CFormLabel,
   CInputGroup,
   CInputGroupText,
   CRow,
-  CTooltip,
+  CToast,
+  CToastBody,
+  CToastClose,
+  CToaster,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
-import { apple } from 'src/assets/brand/apple'
-import { google } from 'src/assets/brand/google'
-import { logo } from 'src/assets/brand/logo'
-import { eye } from 'src/assets/icons/eye'
+import { cilCheckCircle, cilLockLocked, cilUser, cilXCircle } from '@coreui/icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+//import { faGoogle } from '@fortawesome/free-brands-svg-icons'
+import { faRightToBracket } from '@fortawesome/free-solid-svg-icons'
+import { AuthContext } from 'src/context/AuthContext'
+//import { useGoogleLogin } from '@react-oauth/google'
 
 const Login = () => {
+  const [username, setUsername] = useState(null)
+  const [password, setPassword] = useState(null)
+  const { login } = useContext(AuthContext)
+  const navigate = useNavigate()
+
+  //state variable for toast
+  const [toast, addToast] = useState(0)
+  const toaster = useRef()
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    try {
+      await login(username, password)
+      addToast(generateToast('success', 'Login successful.'))
+      navigate('/')
+    } catch (error) {
+      addToast(generateToast('error', 'Login failed: ' + error.response.data.message))
+    }
+  }
+
+  // const handleGoogleLogin = useGoogleLogin({
+  //   onSuccess: async (response) => {
+  //     try {
+  //       const googleCode = response.code
+  //       await loginWithGoogle(googleCode)
+  //       navigate('/')
+  //     } catch (error) {
+  //       console.error('Google login failed', error)
+  //     }
+  //   },
+  //   onError: (errorResponse) => {
+  //     console.error('Google login failed: ', errorResponse)
+  //   },
+  //   scope: 'openid profile email',
+  //   flow: 'auth-code',
+  // })
+
+  //toast function
+  const generateToast = (status, message) => {
+    const color = status === 'success' ? 'success' : 'danger'
+    const icon = status === 'success' ? cilCheckCircle : cilXCircle
+
+    return (
+      <CToast autohide={true} color={color} className="text-white align-items-center">
+        <div className="d-flex">
+          <CIcon icon={icon} className="ms-2 toast-icon-m" size="xl" />
+          <CToastBody>{message}</CToastBody>
+          <CToastClose className="me-2 m-auto" white />
+        </div>
+      </CToast>
+    )
+  }
+
   return (
     <div className="bg-body-tertiary min-vh-100 d-flex flex-row align-items-center">
       <CContainer>
         <CRow className="justify-content-center">
-          <CCol md={8} lg={6} xl={5}>
-            <div className="d-flex flex-column gap-4">
-              <div className="text-center">
-                <CIcon icon={logo} height={48} />
-              </div>
-              <CCard className="p-4">
-                <CCardBody className="d-flex flex-column gap-4">
-                  <h2 className="h5 text-center mb-0">Login to your account</h2>
-                  <CForm className="row gy-3">
-                    <CCol xs={12}>
-                      <CFormLabel htmlFor="email">Email address</CFormLabel>
-                      <CFormInput
-                        id="email"
-                        type="email"
-                        placeholder="your@email.com"
-                        autoComplete="email"
-                      />
-                    </CCol>
-                    <CCol xs={12}>
-                      <div className="d-flex justify-content-between">
-                        <CFormLabel htmlFor="password">Password</CFormLabel>
-                        <Link to="/authentication/reset-password">I forgot password</Link>
-                      </div>
-                      <CInputGroup>
-                        <CFormInput
-                          id="password"
-                          type="password"
-                          placeholder="Your password"
-                          autoComplete="current-password"
-                        />
-                        <CInputGroupText>
-                          <CTooltip content="Show password">
-                            <CButton
-                              type="button"
-                              color="link"
-                              className="p-0 link-secondary"
-                              aria-label="Show password"
-                            >
-                              <CIcon icon={eye} size="sm" />
-                            </CButton>
-                          </CTooltip>
-                        </CInputGroupText>
-                      </CInputGroup>
-                    </CCol>
-                    <CCol xs={12}>
-                      <CFormCheck id="rememberMe" label="Remember me on this device" />
-                    </CCol>
-                    <CCol xs={12}>
-                      <CButton color="primary" type="submit" className="w-100">
-                        Sign in
-                      </CButton>
-                    </CCol>
-                  </CForm>
-                  <div className="position-relative">
-                    <hr />
-                    <div className="position-absolute top-50 start-50 translate-middle bg-body px-2 text-body-tertiary text-uppercase small">
-                      or
-                    </div>
+          <CCol md={8}>
+            <CCardGroup className="mindaam-login-card-group">
+              <div className="left-pane text-white bg-primary py-5">
+                <CCardBody className="text-center">
+                  <div>
+                    <div className="minda-logo"></div>
+                    <h3 className="fw-bold mt-4">MinDA Examination Management System</h3>
                   </div>
-                  <CRow>
-                    <CCol>
-                      <CButton type="button" variant="outline" className="w-100">
-                        <CIcon icon={google} className="me-1" />
-                        Login with Google
-                      </CButton>
-                    </CCol>
-                    <CCol>
-                      <CButton type="button" variant="outline" className="w-100">
-                        <CIcon icon={apple} className="me-1" />
-                        Login with Apple
-                      </CButton>
-                    </CCol>
-                  </CRow>
+                </CCardBody>
+              </div>
+              <CCard className="right-pane p-5">
+                <CCardBody>
+                  <CForm onSubmit={handleSubmit}>
+                    <h2 className="fw-bold">Login</h2>
+                    <p className="text-body-secondary muted-text mt-4 fw-bold">
+                      Welcome! Please login using your account details.
+                    </p>
+                    <CInputGroup className="mb-3 mt-2">
+                      <CInputGroupText>
+                        <CIcon icon={cilUser} />
+                      </CInputGroupText>
+                      <CFormInput
+                        type="text"
+                        name="username"
+                        placeholder="Username"
+                        autoComplete="username"
+                        onChange={(e) => setUsername(e.target.value)}
+                      />
+                    </CInputGroup>
+                    <CInputGroup className="mb-4">
+                      <CInputGroupText>
+                        <CIcon icon={cilLockLocked} />
+                      </CInputGroupText>
+                      <CFormInput
+                        type="password"
+                        name="password"
+                        placeholder="Password"
+                        autoComplete="current-password"
+                        onChange={(e) => setPassword(e.target.value)}
+                      />
+                    </CInputGroup>
+                    <CRow>
+                      <CCol xs={12}>
+                        <CButton type="submit" color="btn btn-info-new mt-2" className="px-4">
+                          <FontAwesomeIcon icon={faRightToBracket} /> Login
+                        </CButton>
+                      </CCol>
+                    </CRow>
+                    {/* <CRow>
+                      <CCol xs={12}>
+                        <div className="strike">
+                          <span>or</span>
+                        </div>
+                      </CCol>
+                    </CRow> */}
+                    {/* <CRow>
+                      <CCol xs={12}>
+                        <CButton
+                          onClick={handleGoogleLogin}
+                          color="btn btn-info-rev-new mt-2"
+                          className="px-4"
+                        >
+                          <FontAwesomeIcon icon={faGoogle} /> Sign in with Google
+                        </CButton>
+                      </CCol>
+                    </CRow> */}
+                  </CForm>
                 </CCardBody>
               </CCard>
-              <div className="text-center text-body-secondary">
-                Need an account? <Link to="/authentication/register">Sign up</Link>
-              </div>
-            </div>
+            </CCardGroup>
           </CCol>
         </CRow>
       </CContainer>
+      <CToaster className="p-3" placement="top-end" push={toast} ref={toaster} />
     </div>
   )
 }

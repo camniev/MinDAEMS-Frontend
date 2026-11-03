@@ -22,6 +22,9 @@ import { useSelector } from 'react-redux'
 import { CSpinner, useColorModes } from '@coreui/react'
 import './scss/style.scss'
 
+import { AuthProvider, AuthContext } from './context/AuthContext'
+import ProtectedRoute from './components/ProtectedRoute'
+
 // Containers
 const DefaultLayout = React.lazy(() => import('./layout/DefaultLayout'))
 const ApplicantLayout = React.lazy(() => import('./layout/ApplicantLayout'))
@@ -43,6 +46,13 @@ const Page404 = React.lazy(() => import('./views/error-pages/page404/Page404'))
 const Page500 = React.lazy(() => import('./views/error-pages/page500/Page500'))
 const ApplicantSchedules = React.lazy(() => import('./applicant/ApplicantSchedules'))
 const ApplicantExamDetails = React.lazy(() => import('./applicant/ApplicantExamDetails'))
+
+export const ROLES = {
+  ADMIN: 'Administrator',
+  PROCTOR: 'Proctor',
+  CHECKER: 'Checker',
+  APPLICANT: 'Applicant',
+}
 
 /**
  * Main Application Component
@@ -85,64 +95,97 @@ const App = () => {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <HashRouter>
-      <Suspense
-        fallback={
-          <div className="pt-3 text-center">
-            <CSpinner color="primary" variant="grow" />
-          </div>
-        }
-      >
-        <Routes>
-          <Route exact path="/authentication/login" name="Login Page" element={<Login />} />
-          <Route
-            exact
-            path="/authentication/register"
-            name="Register Page"
-            element={<Register />}
-          />
-          <Route
-            exact
-            path="/authentication/check-email"
-            name="Check Email Page"
-            element={<CheckEmail />}
-          />
-          <Route
-            exact
-            path="/authentication/reset-password"
-            name="Reset Password Page"
-            element={<ResetPassword />}
-          />
-          <Route
-            exact
-            path="/authentication/change-password"
-            name="Change Password Page"
-            element={<ChangePassword />}
-          />
-          <Route
-            exact
-            path="/authentication/password-changed"
-            name="Password Changed Page"
-            element={<PasswordChanged />}
-          />
-          <Route exact path="/error-pages/404" name="Page 404" element={<Page404 />} />
-          <Route exact path="/error-pages/500" name="Page 500" element={<Page500 />} />
+    <AuthProvider>
+      <HashRouter>
+        <Suspense
+          fallback={
+            <div className="pt-3 text-center">
+              <CSpinner color="primary" variant="grow" />
+            </div>
+          }
+        >
+          <Routes>
+            <Route
+              exact
+              path="/login"
+              name="Login Page"
+              element={<LoginRedirect />}
+            />
+            <Route
+              exact
+              path="/register"
+              name="Register Page"
+              element={<Register />}
+            />
+            {/* <Route
+              exact
+              path="/authentication/check-email"
+              name="Check Email Page"
+              element={<CheckEmail />}
+            />
+            <Route
+              exact
+              path="/authentication/reset-password"
+              name="Reset Password Page"
+              element={<ResetPassword />}
+            /> */}
+            {/* <Route
+              exact
+              path="/authentication/change-password"
+              name="Change Password Page"
+              element={<ChangePassword />}
+            /> */}
+            {/* <Route
+              exact
+              path="/authentication/password-changed"
+              name="Password Changed Page"
+              element={<PasswordChanged />}
+            /> */}
+            <Route exact path="/error-pages/404" name="Page 404" element={<Page404 />} />
+            <Route exact path="/error-pages/500" name="Page 500" element={<Page500 />} />
 
-          {/* Applicant portal — own layout, so applicants never land inside the
-              HR shell. Unknown /applicant/* paths bounce back to the schedules
-              page rather than falling through to the HR catch-all below. */}
-          <Route path="/applicant" element={<ApplicantLayout />}>
-            <Route index element={<Navigate to="schedules" replace />} />
-            <Route path="/applicant/schedules" element={<ApplicantSchedules />} />
-            <Route path="exam/:enrollmentId" element={<ApplicantExamDetails />} />
-            <Route path="*" element={<Navigate to="/applicant/schedules" replace />} />
-          </Route>
+            {/* Applicant portal — own layout, so applicants never land inside the
+                HR shell. Unknown /applicant/* paths bounce back to the schedules
+                page rather than falling through to the HR catch-all below. */}
+            <Route path="/applicant" element={<ApplicantLayout />}>
+              <Route index element={<Navigate to="schedules" replace />} />
+              <Route path="/applicant/schedules" element={<ApplicantSchedules />} />
+              <Route path="exam/:enrollmentId" element={<ApplicantExamDetails />} />
+              <Route path="*" element={<Navigate to="/applicant/schedules" replace />} />
+            </Route>
 
-          <Route path="*" name="Home" element={<DefaultLayout />} />
-        </Routes>
-      </Suspense>
-    </HashRouter>
+            <Route
+              path="*"
+              name="Home" 
+              element={
+                <ProtectedRoute>
+                  <DefaultLayout />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </Suspense>
+      </HashRouter>
+    </AuthProvider>
   )
+}
+
+const LoginRedirect = () => {
+  const { user, authToken } = React.useContext(AuthContext)
+
+  if (authToken === null && !document.cookie.includes('refreshToken=')) {
+    return <Login />
+  }
+
+  if (!user && authToken) {
+    return <CSpinner color="primary" variant="grow" />
+  }
+
+  if (user && user.mustChangePasswordOnFirstLogin) {
+    return <Navigate to="/password-update" />
+  }
+
+  return user ? <Navigate to="/" /> : <Login />
 }
 
 export default App
