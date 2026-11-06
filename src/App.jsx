@@ -46,6 +46,7 @@ const Page404 = React.lazy(() => import('./views/error-pages/page404/Page404'))
 const Page500 = React.lazy(() => import('./views/error-pages/page500/Page500'))
 const ApplicantSchedules = React.lazy(() => import('./applicant/ApplicantSchedules'))
 const ApplicantExamDetails = React.lazy(() => import('./applicant/ApplicantExamDetails'))
+const ApplicantExamTaking = React.lazy(() => import('./applicant/ApplicantExamTaking'))
 
 export const ROLES = {
   ADMIN: 'Administrator',
@@ -151,6 +152,7 @@ const App = () => {
               <Route index element={<Navigate to="schedules" replace />} />
               <Route path="/applicant/schedules" element={<ApplicantSchedules />} />
               <Route path="exam/:enrollmentId" element={<ApplicantExamDetails />} />
+              <Route path="exam/:enrollmentId/take" element={<ApplicantExamTaking />} />
               <Route path="*" element={<Navigate to="/applicant/schedules" replace />} />
             </Route>
 

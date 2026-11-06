@@ -4,7 +4,7 @@ import { CAlert, CBadge, CButton, CCard, CCardBody, CCol, CRow, CSpinner } from 
 import CIcon from '@coreui/icons-react'
 import { cilArrowLeft, cilClock, cilFullscreen, cilMediaPlay } from '@coreui/icons'
 import { useApplicantSession } from 'src/applicant/ApplicantSession'
-import { useFullscreen } from 'src/applicant/useFullscreen'
+import { useFullscreen } from 'src/applicant/useFullScreen'
 
 // Same base-URL convention as ApplicantSchedules.jsx / ExamContext.jsx.
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5026/api'
@@ -26,7 +26,6 @@ const ApplicantExamDetails = () => {
   const [exam, setExam] = useState(null)
   const [loadState, setLoadState] = useState('loading') // loading | ready | notFound | error
   const [loadError, setLoadError] = useState(null)
-  const [startClicked, setStartClicked] = useState(false)
 
   // The URL only carries the enrollment id, so look it up among this
   // applicant's own Ongoing exams (the same endpoint the schedules page
@@ -166,7 +165,7 @@ const ApplicantExamDetails = () => {
                 <CButton
                   color="success"
                   disabled={!canStart}
-                  onClick={() => setStartClicked(true)}
+                  onClick={() => navigate(`/applicant/exam/${enrollmentId}/take`)}
                 >
                   <CIcon icon={cilMediaPlay} className="me-1" />
                   Start Exam
@@ -179,15 +178,6 @@ const ApplicantExamDetails = () => {
                   This exam is marked {exam.enrollmentStatus} for you, so it can&apos;t be started.
                 </div>
               ) : null}
-
-              {/* STUB — the questions page is the next piece. Starting does
-                  nothing yet beyond acknowledging the click. */}
-              {startClicked && (
-                <CAlert color="info" className="mt-3 mb-0">
-                  Full screen confirmed. The exam questions page isn&apos;t built yet — this is
-                  where the exam will begin.
-                </CAlert>
-              )}
             </CCardBody>
           </CCard>
         </CCol>
