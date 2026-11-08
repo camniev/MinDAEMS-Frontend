@@ -20,6 +20,7 @@ import { cilCheckCircle, cilClock, cilFullscreen } from '@coreui/icons'
 import { useApplicantSession } from 'src/applicant/ApplicantSession'
 import { detectFullscreen, useFullscreen } from 'src/applicant/useFullScreen'
 import { API_BASE_URL, extractErrorMessage, sendJson } from '../assets/api/Api'
+import EssayEditor from './EssayEditor'
 
 // Answers are saved this long after the applicant stops changing something.
 const AUTOSAVE_DELAY_MS = 1000
@@ -85,12 +86,10 @@ const QuestionCard = ({ question, index, answer, updateAnswer }) => {
         </div>
 
         {question.type === 'essay' ? (
-          <CFormTextarea
-            rows={6}
-            placeholder="Type your answer here..."
-            aria-label={`Answer to question ${index + 1}`}
+          <EssayEditor
+            ariaLabel={`Answer to question ${index + 1}`}
             value={answer.essayText}
-            onChange={(e) => updateAnswer(question.id, { essayText: e.target.value })}
+            onChange={(html) => updateAnswer(question.id, { essayText: html })}
           />
         ) : (
           <>
@@ -452,8 +451,10 @@ const ApplicantExamTaking = () => {
             <CIcon icon={cilFullscreen} size="3xl" className="text-warning mb-3" />
             <h5>You left full screen</h5>
             <p className="text-body-secondary">
-              The questions are hidden until you return to full screen. Your time is still
-              running, and your answers so far are saved.
+              Questions are hidden until you return to full-screen mode. Your exam timer will continue running and all your answers so far have been automatically saved.
+            </p>
+            <p className="text-body-secondary">
+              However, the proctor will be notified that your exam screen has lost focus or has been minimized, along with the reason for the interruption.
             </p>
             {canRequest && (
               <CButton color="primary" onClick={enter}>

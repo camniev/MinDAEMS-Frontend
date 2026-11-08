@@ -352,3 +352,25 @@ $btn-info-bg-color: #83c1ff;
 	border-radius: 1em;
 }
 
+// DARK MODE
+[data-coreui-theme="dark"] {
+	.mindaam-login-card-group {
+		.input-group-text {
+			background-color: #30353e;
+			border: 1px solid #30353e;
+		}
+
+		.form-control {
+			background-color: #30353e;
+			border: 1px solid #30353e;
+		}
+	}
+
+	.dashboard-charts {
+		.chart-wrapper {
+			background-color: #161b27;
+			border-radius: 20px;
+			padding: 20px;
+		}
+	}
+}
