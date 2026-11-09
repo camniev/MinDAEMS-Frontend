@@ -1,6 +1,7 @@
-import React from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import React, { useContext } from 'react'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
+  CButton,
   CContainer,
   CHeader,
   CHeaderBrand,
@@ -8,14 +9,22 @@ import {
   CNavItem,
   CNavLink,
 } from '@coreui/react'
-import { ApplicantSessionProvider } from 'src/applicant/ApplicantSession'
+import { AuthContext } from 'src/context/AuthContext'
 
-// Layout for everything under /applicant. Deliberately separate from
-// DefaultLayout: applicants get their own small header/menu instead of the
-// HR sidebar, and this is the single place the applicant session provider
-// lives (so every applicant page shares one source of truth for the email).
-const ApplicantLayout = () => (
-  <ApplicantSessionProvider>
+// Layout for everything under /applicant (the route itself is wrapped in
+// <ProtectedRoute allowedRoles={[ROLES.APPLICANT]}> in App.jsx). Deliberately
+// separate from DefaultLayout: applicants get their own small header/menu
+// instead of the HR sidebar.
+const ApplicantLayout = () => {
+  const { user, logout } = useContext(AuthContext)
+  const navigate = useNavigate()
+
+  const handleSignOut = async () => {
+    await logout()
+    navigate('/login', { replace: true })
+  }
+
+  return (
     <div className="min-vh-100 bg-body-tertiary">
       <CHeader position="sticky" className="mb-4 p-0">
         <CContainer className="border-bottom px-4" fluid>
@@ -29,13 +38,21 @@ const ApplicantLayout = () => (
               </CNavLink>
             </CNavItem>
           </CHeaderNav>
+          <div className="d-flex align-items-center gap-3">
+            <span className="small text-body-secondary d-none d-sm-inline">
+              {user?.fullname || user?.username}
+            </span>
+            <CButton color="secondary" variant="outline" size="sm" onClick={handleSignOut}>
+              Sign out
+            </CButton>
+          </div>
         </CContainer>
       </CHeader>
       <CContainer lg className="pb-5">
         <Outlet />
       </CContainer>
     </div>
-  </ApplicantSessionProvider>
-)
+  )
+}
 
 export default ApplicantLayout

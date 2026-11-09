@@ -12,13 +12,15 @@ const AuthProvider = ({ children }) => {
 
   const setUserFromToken = (token) => {
     const decodedToken = jwtDecode(token)
-    setUser({
+    const nextUser = {
       id: decodedToken.nameid,
       username: decodedToken.unique_name,
       fullname: decodedToken.given_name,
       role: decodedToken.role,
       mustChangePasswordOnFirstLogin: decodedToken.mustChangePasswordOnFirstLogin === 'true',
-    })
+    }
+    setUser(nextUser)
+    return nextUser
   }
 
   useEffect(() => {
@@ -66,7 +68,8 @@ const AuthProvider = ({ children }) => {
       )
       const accessToken = response.data.accessToken
       setAuthToken(accessToken)
-      setUserFromToken(accessToken)
+      // Returned so the caller can send each role to its own home page.
+      return setUserFromToken(accessToken)
     } catch (error) {
       throw error
     }

@@ -23,6 +23,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 //import { faGoogle } from '@fortawesome/free-brands-svg-icons'
 import { faRightToBracket } from '@fortawesome/free-solid-svg-icons'
 import { AuthContext } from 'src/context/AuthContext'
+import { homePathForRole } from 'src/constants/roles'
 //import { useGoogleLogin } from '@react-oauth/google'
 
 const Login = () => {
@@ -38,11 +39,13 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
-      await login(username, password)
+      const loggedInUser = await login(username, password)
       addToast(generateToast('success', 'Login successful.'))
-      navigate('/')
+      navigate(homePathForRole(loggedInUser.role))
     } catch (error) {
-      addToast(generateToast('error', 'Login failed: ' + error.response.data.message))
+      // error.response is undefined when the server can't be reached at all.
+      const reason = error.response?.data?.message ?? 'Unable to reach the server. Please try again.'
+      addToast(generateToast('error', 'Login failed: ' + reason))
     }
   }
 

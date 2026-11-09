@@ -3,13 +3,12 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { CAlert, CBadge, CButton, CCard, CCardBody, CCol, CRow, CSpinner } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilArrowLeft, cilClock, cilFullscreen, cilMediaPlay } from '@coreui/icons'
-import { useApplicantSession } from 'src/applicant/ApplicantSession'
+import { useApplicantAuth } from 'src/applicant/useApplicantAuth'
 import { useFullscreen } from 'src/applicant/useFullScreen'
+import { API_BASE_URL, extractErrorMessage } from '../assets/api/Api'
 
-// Same base-URL convention as ApplicantSchedules.jsx / ExamContext.jsx.
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5026/api'
-const mySchedulesEndpoint = (email) =>
-  `${API_BASE_URL}/Applicant/MySchedules?email=${encodeURIComponent(email)}`
+// Who is asking comes from the access token, not from anything in the URL.
+const MY_SCHEDULES_ENDPOINT = `${API_BASE_URL}/Applicant/MySchedules`
 
 // ASSUMPTION: an applicant who already finished (or was disqualified from)
 // an exam shouldn't be able to start it again. The schedules list still shows
@@ -20,7 +19,7 @@ const BLOCKED_ENROLLMENT_STATUSES = ['Completed', 'Disqualified']
 const ApplicantExamDetails = () => {
   const { enrollmentId } = useParams()
   const navigate = useNavigate()
-  const { email, isIdentified } = useApplicantSession()
+  const { authedFetch } = useApplicantAuth()
   const { isFullscreen, canRequest, enter, error: fullscreenError } = useFullscreen()
 
   const [exam, setExam] = useState(null)
@@ -32,13 +31,12 @@ const ApplicantExamDetails = () => {
   // uses). That also means an exam that isn't open, or isn't theirs, simply
   // isn't found here — no separate check needed.
   const loadExam = useCallback(async () => {
-    if (!email) return
     setLoadState('loading')
     setLoadError(null)
     try {
-      const response = await fetch(mySchedulesEndpoint(email))
+      const response = await authedFetch(MY_SCHEDULES_ENDPOINT)
       if (!response.ok) {
-        throw new Error(`Failed to load the exam details (status ${response.status}).`)
+        throw new Error(await extractErrorMessage(response, 'Failed to load the exam details.'))
       }
       const list = await response.json()
       const match = list.find((e) => e.examEnrollmentId === enrollmentId) ?? null
@@ -49,7 +47,7 @@ const ApplicantExamDetails = () => {
       setLoadError(err.message || 'Failed to load the exam details.')
       setLoadState('error')
     }
-  }, [email, enrollmentId])
+  }, [authedFetch, enrollmentId])
 
   useEffect(() => {
     loadExam()
@@ -61,18 +59,6 @@ const ApplicantExamDetails = () => {
       Back to My Exam Schedules
     </CButton>
   )
-
-  if (!isIdentified) {
-    return (
-      <>
-        {backButton}
-        <CAlert color="warning">
-          We don&apos;t know who you are yet. Go back to My Exam Schedules and enter your email
-          first.
-        </CAlert>
-      </>
-    )
-  }
 
   if (loadState === 'loading') {
     return (

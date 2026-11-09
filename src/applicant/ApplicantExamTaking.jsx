@@ -17,7 +17,7 @@ import {
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilCheckCircle, cilClock, cilFullscreen } from '@coreui/icons'
-import { useApplicantSession } from 'src/applicant/ApplicantSession'
+import { useApplicantAuth } from 'src/applicant/useApplicantAuth'
 import { detectFullscreen, useFullscreen } from 'src/applicant/useFullScreen'
 import { API_BASE_URL, extractErrorMessage, sendJson } from '../assets/api/Api'
 import EssayEditor from './EssayEditor'
@@ -137,7 +137,7 @@ const QuestionCard = ({ question, index, answer, updateAnswer }) => {
 const ApplicantExamTaking = () => {
   const { enrollmentId } = useParams()
   const navigate = useNavigate()
-  const { email, isIdentified } = useApplicantSession()
+  const { authedFetch } = useApplicantAuth()
   const { isFullscreen, canRequest, enter, error: fullscreenError } = useFullscreen()
 
   // This page is only reachable from the details page, i.e. already in full
@@ -183,12 +183,12 @@ const ApplicantExamTaking = () => {
 
   // ---- start / resume ----
   useEffect(() => {
-    if (!cameInFullscreen || !email) return undefined
+    if (!cameInFullscreen) return undefined
     let cancelled = false
 
     const run = async () => {
       try {
-        const response = await sendJson(examEndpoint(enrollmentId, 'Start'), 'POST', { email })
+        const response = await authedFetch(examEndpoint(enrollmentId, 'Start'), { method: 'POST' })
         if (cancelled) return
         if (response.status === 409 || response.status === 410) {
           endAttempt(await extractErrorMessage(response, 'This exam can no longer be taken.'))
@@ -215,7 +215,7 @@ const ApplicantExamTaking = () => {
     return () => {
       cancelled = true
     }
-  }, [cameInFullscreen, email, enrollmentId, attempt, endAttempt])
+  }, [cameInFullscreen, enrollmentId, attempt, endAttempt, authedFetch])
 
   // ---- autosave ----
   // One request at a time. If something changes while a save is in flight,
@@ -232,8 +232,7 @@ const ApplicantExamTaking = () => {
     try {
       do {
         dirtyRef.current = false
-        const response = await sendJson(examEndpoint(enrollmentId, 'Answers'), 'PUT', {
-          email,
+        const response = await sendJson(authedFetch, examEndpoint(enrollmentId, 'Answers'), 'PUT', {
           answers: toPayload(answersRef.current),
         })
         // A submit may have started (or finished) while this was in flight —
@@ -254,7 +253,7 @@ const ApplicantExamTaking = () => {
     } finally {
       savingRef.current = false
     }
-  }, [email, enrollmentId, endAttempt])
+  }, [authedFetch, enrollmentId, endAttempt])
 
   const updateAnswer = useCallback(
     (questionId, change) => {
@@ -283,8 +282,7 @@ const ApplicantExamTaking = () => {
       setSubmitting(true)
       setSubmitError(null)
       try {
-        const response = await sendJson(examEndpoint(enrollmentId, 'Submit'), 'POST', {
-          email,
+        const response = await sendJson(authedFetch, examEndpoint(enrollmentId, 'Submit'), 'POST', {
           answers: toPayload(answersRef.current),
         })
         if (response.status === 409 || response.status === 410) {
@@ -306,7 +304,7 @@ const ApplicantExamTaking = () => {
         setSubmitting(false)
       }
     },
-    [email, enrollmentId, endAttempt],
+    [authedFetch, enrollmentId, endAttempt],
   )
 
   // ---- countdown (from the server's seconds-remaining, not the clock) ----
@@ -333,15 +331,6 @@ const ApplicantExamTaking = () => {
       Back to My Exam Schedules
     </CButton>
   )
-
-  if (!isIdentified) {
-    return (
-      <CAlert color="warning">
-        We don&apos;t know who you are yet. Go back to My Exam Schedules and enter your email
-        first.
-      </CAlert>
-    )
-  }
 
   if (phase === 'loading') {
     return (
@@ -451,10 +440,8 @@ const ApplicantExamTaking = () => {
             <CIcon icon={cilFullscreen} size="3xl" className="text-warning mb-3" />
             <h5>You left full screen</h5>
             <p className="text-body-secondary">
-              Questions are hidden until you return to full-screen mode. Your exam timer will continue running and all your answers so far have been automatically saved.
-            </p>
-            <p className="text-body-secondary">
-              However, the proctor will be notified that your exam screen has lost focus or has been minimized, along with the reason for the interruption.
+              The questions are hidden until you return to full screen. Your time is still
+              running, and your answers so far are saved.
             </p>
             {canRequest && (
               <CButton color="primary" onClick={enter}>

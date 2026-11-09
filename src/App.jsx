@@ -24,6 +24,7 @@ import './scss/style.scss'
 
 import { AuthProvider, AuthContext } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
+import { HR_ROLES, ROLES, homePathForRole } from './constants/roles'
 
 // Containers
 const DefaultLayout = React.lazy(() => import('./layout/DefaultLayout'))
@@ -48,12 +49,9 @@ const ApplicantSchedules = React.lazy(() => import('./applicant/ApplicantSchedul
 const ApplicantExamDetails = React.lazy(() => import('./applicant/ApplicantExamDetails'))
 const ApplicantExamTaking = React.lazy(() => import('./applicant/ApplicantExamTaking'))
 
-export const ROLES = {
-  ADMIN: 'Administrator',
-  PROCTOR: 'Proctor',
-  CHECKER: 'Checker',
-  APPLICANT: 'Applicant',
-}
+// ROLES now lives in constants/roles.js (so ProtectedRoute and Login can use it
+// without importing App.jsx). Re-exported here so existing imports keep working.
+export { ROLES }
 
 /**
  * Main Application Component
@@ -148,7 +146,14 @@ const App = () => {
             {/* Applicant portal — own layout, so applicants never land inside the
                 HR shell. Unknown /applicant/* paths bounce back to the schedules
                 page rather than falling through to the HR catch-all below. */}
-            <Route path="/applicant" element={<ApplicantLayout />}>
+            <Route
+              path="/applicant"
+              element={
+                <ProtectedRoute allowedRoles={[ROLES.APPLICANT]}>
+                  <ApplicantLayout />
+                </ProtectedRoute>
+              }
+            >
               <Route index element={<Navigate to="schedules" replace />} />
               <Route path="/applicant/schedules" element={<ApplicantSchedules />} />
               <Route path="exam/:enrollmentId" element={<ApplicantExamDetails />} />
@@ -160,7 +165,7 @@ const App = () => {
               path="*"
               name="Home" 
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={HR_ROLES}>
                   <DefaultLayout />
                 </ProtectedRoute>
               }
@@ -187,7 +192,7 @@ const LoginRedirect = () => {
     return <Navigate to="/password-update" />
   }
 
-  return user ? <Navigate to="/" /> : <Login />
+  return user ? <Navigate to={homePathForRole(user.role)} /> : <Login />
 }
 
 export default App

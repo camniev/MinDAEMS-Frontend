@@ -1,77 +1,28 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  CAlert,
-  CBadge,
-  CButton,
-  CCard,
-  CCardBody,
-  CCol,
-  CForm,
-  CFormInput,
-  CFormLabel,
-  CRow,
-  CSpinner,
-} from '@coreui/react'
+import { CAlert, CBadge, CButton, CCard, CCardBody, CCol, CRow, CSpinner } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilCalendar, cilClock, cilMediaPlay, cilPeople } from '@coreui/icons'
-import { useApplicantSession } from 'src/applicant/ApplicantSession'
+import { useApplicantAuth } from 'src/applicant/useApplicantAuth'
+import { API_BASE_URL, extractErrorMessage } from '../assets/api/Api'
 
-// Same base-URL convention as ExamContext.jsx.
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5026/api'
-const mySchedulesEndpoint = (email) =>
-  `${API_BASE_URL}/Applicant/MySchedules?email=${encodeURIComponent(email)}`
-
-const IdentityGate = ({ onSubmit }) => {
-  const [value, setValue] = useState('')
-
-  const submit = (e) => {
-    e.preventDefault()
-    const trimmed = value.trim()
-    if (trimmed) onSubmit(trimmed)
-  }
-
-  return (
-    <CCard className="mx-auto mt-5" style={{ maxWidth: 420 }}>
-      <CCardBody>
-        <h5 className="mb-1">View Your Exam Schedules</h5>
-        <p className="small text-body-secondary">
-          Enter the email address you were enrolled with to see your exams.
-        </p>
-        <CForm onSubmit={submit}>
-          <CFormLabel htmlFor="applicant-email">Email Address</CFormLabel>
-          <CFormInput
-            id="applicant-email"
-            type="email"
-            required
-            placeholder="you@example.com"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-          />
-          <CButton color="primary" type="submit" className="mt-3 w-100">
-            Continue
-          </CButton>
-        </CForm>
-      </CCardBody>
-    </CCard>
-  )
-}
+// Who is asking comes from the access token, not from anything in the URL.
+const MY_SCHEDULES_ENDPOINT = `${API_BASE_URL}/Applicant/MySchedules`
 
 const ApplicantSchedules = () => {
   const navigate = useNavigate()
-  const { email, setEmail, isIdentified } = useApplicantSession()
+  const { user, authedFetch } = useApplicantAuth()
   const [exams, setExams] = useState([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   const fetchMySchedules = useCallback(async () => {
-    if (!email) return
     setLoading(true)
     setError(null)
     try {
-      const response = await fetch(mySchedulesEndpoint(email))
+      const response = await authedFetch(MY_SCHEDULES_ENDPOINT)
       if (!response.ok) {
-        throw new Error(`Failed to load your exam schedules (status ${response.status}).`)
+        throw new Error(await extractErrorMessage(response, 'Failed to load your exam schedules.'))
       }
       setExams(await response.json())
     } catch (err) {
@@ -80,28 +31,19 @@ const ApplicantSchedules = () => {
     } finally {
       setLoading(false)
     }
-  }, [email])
+  }, [authedFetch])
 
   useEffect(() => {
     fetchMySchedules()
   }, [fetchMySchedules])
 
-  if (!isIdentified) {
-    return <IdentityGate onSubmit={setEmail} />
-  }
-
   return (
     <>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <div>
-          <h4 className="mb-0">My Exam Schedules</h4>
-          <div className="small text-body-secondary">
-            Signed in as <strong>{email}</strong>
-          </div>
+      <div className="mb-4">
+        <h4 className="mb-0">My Exam Schedules</h4>
+        <div className="small text-body-secondary">
+          Signed in as <strong>{user?.fullname || user?.username}</strong>
         </div>
-        <CButton color="link" size="sm" onClick={() => setEmail('')}>
-          Not you? Switch email
-        </CButton>
       </div>
 
       {loading && (
@@ -111,7 +53,14 @@ const ApplicantSchedules = () => {
         </div>
       )}
 
-      {!loading && error && <CAlert color="danger">{error}</CAlert>}
+      {!loading && error && (
+        <CAlert color="danger" className="d-flex justify-content-between align-items-center">
+          <span>{error}</span>
+          <CButton color="danger" variant="outline" size="sm" onClick={fetchMySchedules}>
+            Retry
+          </CButton>
+        </CAlert>
+      )}
 
       {!loading && !error && exams.length === 0 && (
         <CCard>
