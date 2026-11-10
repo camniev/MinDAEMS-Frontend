@@ -1,4 +1,4 @@
-import React, { useState, useContext, useRef } from 'react'
+import React, { useState, useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   CButton,
@@ -12,17 +12,14 @@ import {
   CInputGroup,
   CInputGroupText,
   CRow,
-  CToast,
-  CToastBody,
-  CToastClose,
-  CToaster,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
-import { cilCheckCircle, cilLockLocked, cilUser, cilXCircle } from '@coreui/icons'
+import { cilLockLocked, cilUser } from '@coreui/icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 //import { faGoogle } from '@fortawesome/free-brands-svg-icons'
 import { faRightToBracket } from '@fortawesome/free-solid-svg-icons'
 import { AuthContext } from 'src/context/AuthContext'
+import { useToast } from 'src/context/ToastContext'
 import { homePathForRole } from 'src/constants/roles'
 //import { useGoogleLogin } from '@react-oauth/google'
 
@@ -30,22 +27,19 @@ const Login = () => {
   const [username, setUsername] = useState(null)
   const [password, setPassword] = useState(null)
   const { login } = useContext(AuthContext)
+  const notify = useToast()
   const navigate = useNavigate()
-
-  //state variable for toast
-  const [toast, addToast] = useState(0)
-  const toaster = useRef()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
       const loggedInUser = await login(username, password)
-      addToast(generateToast('success', 'Login successful.'))
+      notify('Login successful.', 'success')
       navigate(homePathForRole(loggedInUser.role))
     } catch (error) {
       // error.response is undefined when the server can't be reached at all.
       const reason = error.response?.data?.message ?? 'Unable to reach the server. Please try again.'
-      addToast(generateToast('error', 'Login failed: ' + reason))
+      notify('Login failed: ' + reason, 'error')
     }
   }
 
@@ -65,22 +59,6 @@ const Login = () => {
   //   scope: 'openid profile email',
   //   flow: 'auth-code',
   // })
-
-  //toast function
-  const generateToast = (status, message) => {
-    const color = status === 'success' ? 'success' : 'danger'
-    const icon = status === 'success' ? cilCheckCircle : cilXCircle
-
-    return (
-      <CToast autohide={true} color={color} className="text-white align-items-center">
-        <div className="d-flex">
-          <CIcon icon={icon} className="ms-2 toast-icon-m" size="xl" />
-          <CToastBody>{message}</CToastBody>
-          <CToastClose className="me-2 m-auto" white />
-        </div>
-      </CToast>
-    )
-  }
 
   return (
     <div className="bg-body-tertiary min-vh-100 d-flex flex-row align-items-center">
@@ -159,7 +137,6 @@ const Login = () => {
           </CCol>
         </CRow>
       </CContainer>
-      <CToaster className="p-3" placement="top-end" push={toast} ref={toaster} />
     </div>
   )
 }

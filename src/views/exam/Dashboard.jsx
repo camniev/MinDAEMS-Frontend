@@ -69,7 +69,7 @@ const Dashboard = () => {
       color: 'warning',
       title: 'Import Applicants',
       sub: 'Single or bulk text import',
-      onClick: () => navigate('/examinees'), // route path left as-is — confirm with routes.js/_nav.jsx before renaming
+      onClick: () => navigate('/applicants'), // route path left as-is — confirm with routes.js/_nav.jsx before renaming
     },
   ]
 
@@ -162,7 +162,7 @@ const Dashboard = () => {
                       color="light"
                       variant="outline"
                       size="sm"
-                      onClick={() => go(active.id, '/examinees')}
+                      onClick={() => go(active.id, '/applicants')}
                     >
                       <CIcon icon={cilPeople} className="me-1" /> Applicant Roster
                     </CButton>

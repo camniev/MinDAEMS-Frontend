@@ -25,6 +25,7 @@ import './scss/style.scss'
 import { AuthProvider, AuthContext } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import { HR_ROLES, ROLES, homePathForRole } from './constants/roles'
+import { ToastProvider } from './context/ToastContext'
 
 // Containers
 const DefaultLayout = React.lazy(() => import('./layout/DefaultLayout'))
@@ -95,15 +96,16 @@ const App = () => {
 
   return (
     <AuthProvider>
-      <HashRouter>
-        <Suspense
-          fallback={
-            <div className="pt-3 text-center">
-              <CSpinner color="primary" variant="grow" />
-            </div>
-          }
-        >
-          <Routes>
+      <ToastProvider>
+        <HashRouter>
+          <Suspense
+            fallback={
+              <div className="pt-3 text-center">
+                <CSpinner color="primary" variant="grow" />
+              </div>
+            }
+          >
+            <Routes>
             <Route
               exact
               path="/login"
@@ -170,9 +172,10 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
-          </Routes>
-        </Suspense>
-      </HashRouter>
+            </Routes>
+          </Suspense>
+        </HashRouter>
+      </ToastProvider>
     </AuthProvider>
   )
 }
