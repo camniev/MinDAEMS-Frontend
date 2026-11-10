@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useRef, useState } from 'react'
+import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react'
 import { CToast, CToastBody, CToastClose, CToaster } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilCheckCircle, cilXCircle } from '@coreui/icons'
@@ -11,13 +11,15 @@ export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([])
   const nextId = useRef(0)
 
-  const notify = (message, type = 'success') => {
+  const notify = useCallback((message, type = 'success') => {
     const id = nextId.current++
     setToasts((items) => [...items, { id, message, type }])
-  }
+  }, [])
+
+  const value = useMemo(() => notify, [notify])
 
   return (
-    <ToastContext.Provider value={notify}>
+    <ToastContext.Provider value={value}>
       {children}
       <CToaster placement="top-end" className="p-3">
         {toasts.map((toast) => (

@@ -1,12 +1,11 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
-import { CToast, CToastBody, CToastClose, CToaster } from '@coreui/react'
+import { useToast } from 'src/context/ToastContext'
 
 const ExamContext = createContext(null)
 export const useExam = () => useContext(ExamContext)
 
 const uid = (p) => `${p}-${Date.now()}${Math.random().toString(36).slice(2, 5)}`
-const TOAST_COLOR = { success: 'success', error: 'danger', info: 'primary' }
 
 // Same base-URL convention as ExamModals.jsx — set VITE_API_BASE_URL in .env;
 // this fallback just matches the endpoint you've been testing against.
@@ -64,16 +63,16 @@ export const ExamProvider = ({ children }) => {
   const [includeArchived, setIncludeArchived] = useState(false)
   const [selectedId, setSelectedId] = useState(null)
   const [search, setSearch] = useState('')
-  const [toasts, setToasts] = useState([])
   const [createOpen, setCreateOpen] = useState(false)
   const [addApplicantOpen, setAddApplicantOpen] = useState(false)
   const [previewId, setPreviewId] = useState(null)
   const isMounted = useRef(true)
+  const notify = useToast() ?? (() => {})
   useEffect(() => () => { isMounted.current = false }, [])
 
   const toast = useCallback((message, type = 'info') => {
-    setToasts((t) => [...t, { id: uid('t'), message, type }])
-  }, [])
+    notify(message, type)
+  }, [notify])
 
   const fetchExams = useCallback(async () => {
     setExamsLoading(true)
@@ -413,29 +412,7 @@ export const ExamProvider = ({ children }) => {
     ],
   )
 
-  return (
-    <ExamContext.Provider value={value}>
-      {children}
-      <CToaster placement="top-end" className="p-3">
-        {toasts.map((t) => (
-          <CToast
-            key={t.id}
-            visible
-            autohide
-            delay={3000}
-            color={TOAST_COLOR[t.type]}
-            className="text-white border-0"
-            onClose={() => setToasts((xs) => xs.filter((x) => x.id !== t.id))}
-          >
-            <div className="d-flex">
-              <CToastBody>{t.message}</CToastBody>
-              <CToastClose className="me-2 m-auto" white />
-            </div>
-          </CToast>
-        ))}
-      </CToaster>
-    </ExamContext.Provider>
-  )
+  return <ExamContext.Provider value={value}>{children}</ExamContext.Provider>
 }
 
 ExamProvider.propTypes = { children: PropTypes.node }
