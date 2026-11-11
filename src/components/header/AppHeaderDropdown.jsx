@@ -11,13 +11,21 @@ import {
 import { cilAccountLogout, cilSettings, cilUser } from '@coreui/icons'
 import CIcon from '@coreui/icons-react'
 
-import avatar from './../../assets/images/avatars/8.jpg'
+import avatar from './../../assets/images/avatars/default-prof-pic.jpg'
 import { AuthContext } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 
 const AppHeaderDropdown = () => {
   const { user, logout } = useContext(AuthContext)
   const navigate = useNavigate()
+
+  const handleViewProfile = () => {
+    if (user?.id) {
+      navigate(`/user-management/edit-user/${user?.id}`)
+    } else {
+      console.error('User ID not found.')
+    }
+  }
 
   const handleLogout = async () => {
     try {
@@ -34,16 +42,12 @@ const AppHeaderDropdown = () => {
       </CDropdownToggle>
       <CDropdownMenu className="pt-0" placement="bottom-end">
         <CDropdownHeader className="bg-body-secondary fw-semibold mb-2">
-          Dr. Sarah Jenkins
-          <div className="small fw-normal text-body-secondary">Head of Examinations</div>
+          {user?.fullname || user?.username}
+          <div className="small fw-normal text-body-secondary">{user?.role}</div>
         </CDropdownHeader>
-        <CDropdownItem href="#">
+        <CDropdownItem href="#" onClick={handleViewProfile}>
           <CIcon icon={cilUser} className="me-2" />
           Profile
-        </CDropdownItem>
-        <CDropdownItem href="#">
-          <CIcon icon={cilSettings} className="me-2" />
-          Settings
         </CDropdownItem>
         <CDropdownDivider />
         <CDropdownItem href="#" onClick={handleLogout}>

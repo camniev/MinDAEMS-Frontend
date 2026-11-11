@@ -1,14 +1,23 @@
-import React, { createContext, useState, useEffect } from 'react'
+import React, { createContext, useState, useEffect, useCallback, useRef } from 'react'
 import PropTypes from 'prop-types'
 import { jwtDecode } from 'jwt-decode'
 import axios from 'axios'
 
 const AuthContext = createContext()
 
+const getRefreshDelay = (token) => {
+  const { exp } = jwtDecode(token)
+  if (typeof exp !== 'number') return 4 * 60 * 1000
+
+  return Math.max(exp * 1000 - Date.now() - 60 * 1000, 5 * 1000)
+}
+
 const AuthProvider = ({ children }) => {
   const [authToken, setAuthToken] = useState(null)
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const refreshTimer = useRef(null)
+  const refreshInProgress = useRef(false)
 
   const setUserFromToken = (token) => {
     const decodedToken = jwtDecode(token)
@@ -23,37 +32,45 @@ const AuthProvider = ({ children }) => {
     return nextUser
   }
 
-  useEffect(() => {
-    const refreshAccessToken = async () => {
-      try {
-        // const hasRefreshToken = document.cookie.includes('refreshToken=')
-        // if (!hasRefreshToken) {
-        //   setLoading(false)
-        //   return
-        // }
-        const response = await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL}/Auth/refresh-token`,
-          {},
-          { withCredentials: true },
-        )
-        const newAccessToken = response.data.accessToken
-        setAuthToken(newAccessToken)
-        setUserFromToken(newAccessToken)
-      } catch (error) {
-        console.error('Failed to refresh access token: ', error)
+  const refreshAccessToken = useCallback(async () => {
+    if (refreshInProgress.current) return
+
+    refreshInProgress.current = true
+    try {
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/Auth/refresh-token`,
+        {},
+        { withCredentials: true },
+      )
+      const newAccessToken = response.data.accessToken
+      setAuthToken(newAccessToken)
+      setUserFromToken(newAccessToken)
+    } catch (error) {
+      console.error('Failed to refresh access token: ', error)
+      if (error.response && error.response.status >= 400 && error.response.status < 500) {
         setAuthToken(null)
         setUser(null)
-      } finally {
-        setLoading(false)
+      } else {
+        refreshTimer.current = setTimeout(refreshAccessToken, 30 * 1000)
       }
+    } finally {
+      refreshInProgress.current = false
+      setLoading(false)
     }
-
-    // Attempt to refresh access token on load
-    refreshAccessToken()
-
-    const interval = setInterval(refreshAccessToken, 14 * 60 * 1000) // Refresh access token every 14 minutes
-    return () => clearInterval(interval)
   }, [])
+
+  useEffect(() => {
+    refreshAccessToken()
+    return () => clearTimeout(refreshTimer.current)
+  }, [refreshAccessToken])
+
+  useEffect(() => {
+    if (!authToken) return undefined
+
+    clearTimeout(refreshTimer.current)
+    refreshTimer.current = setTimeout(refreshAccessToken, getRefreshDelay(authToken))
+    return () => clearTimeout(refreshTimer.current)
+  }, [authToken, refreshAccessToken])
 
   // useEffect(() => {
   //   console.log(user)

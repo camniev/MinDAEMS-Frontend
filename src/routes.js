@@ -7,6 +7,11 @@ const Applicants = React.lazy(() => import('./views/exam/Applicants'))
 // const ApplicantSchedules = React.lazy(() => import('./applicant/ApplicantSchedules'))
 // const ApplicantExamDetails = React.lazy(() => import('./applicant/ApplicantExamDetails'))
 
+// User Management
+const UserAccountsList = React.lazy(() => import('./views/user-management/user-accounts-list/UserAccounts'))
+const ViewUser = React.lazy(() => import('./views/user-management/view-user/ViewUser'))
+
+
 export const routes = [
   { path: '/', exact: true, name: 'Home' },
   {
@@ -33,6 +38,9 @@ export const routes = [
     subtitle: 'Manage enrolled candidates and send assessment invitations.',
     element: Applicants,
   },
+  { path: '/user-management/user-accounts-list', name: 'Add User', element: UserAccountsList },
+  { path: '/user-management/view-user', name: 'Add User', element: ViewUser },
+  { path: '/user-management/edit-user/:userId', name: 'Edit User', element: ViewUser },
   // {
   //   path: '/applicants/schedules',
   //   name: 'My Exam Schedules',

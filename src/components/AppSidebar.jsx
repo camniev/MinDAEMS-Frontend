@@ -19,7 +19,7 @@
  * )
  */
 
-import React from 'react'
+import React, { useContext } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 
 import {
@@ -38,7 +38,8 @@ import { cilEducation } from '@coreui/icons'
 import { CAvatar } from '@coreui/react'
 import { useExam } from '../exam/ExamContext'
 import buildNav from '../_nav'
-import avatar from 'src/assets/images/avatars/8.jpg'
+import avatar from 'src/assets/images/avatars/default-prof-pic.jpg'
+import { AuthContext } from 'src/context/AuthContext'
 
 /**
  * AppSidebar functional component
@@ -57,6 +58,7 @@ const AppSidebar = () => {
   const unfoldable = useSelector((state) => state.sidebarUnfoldable)
   const sidebarShow = useSelector((state) => state.sidebarShow)
   const { exams, openCreate, openPreview } = useExam()
+  const { user } = useContext(AuthContext)
   const navigation = buildNav({
     upcoming: exams.filter((e) => e.status === 'Upcoming').length,
     openCreate,
@@ -93,8 +95,8 @@ const AppSidebar = () => {
       <div className="border-top p-3 d-flex align-items-center gap-2 sidebar-brand-full">
         <CAvatar src={avatar} size="md" />
         <div className="text-truncate">
-          <div className="small fw-semibold text-white">Dr. Sarah Jenkins</div>
-          <div className="small text-body-secondary">Head of Examinations</div>
+          <div className="small fw-semibold text-white">{user?.fullname || user?.username}</div>
+          <div className="small text-body-secondary">{user?.role}</div>
         </div>
       </div>
       <CSidebarFooter className="border-top d-none d-lg-flex">
