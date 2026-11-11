@@ -8,7 +8,7 @@
  * Features:
  * - Dynamic route rendering from routes configuration
  * - Suspense boundary for lazy-loaded components
- * - Automatic redirect from root to dashboard
+ * - Role-specific route access and home redirects
  * - Loading spinner fallback during component load
  *
  * @component
@@ -18,12 +18,15 @@
  * )
  */
 
-import React, { Suspense } from 'react'
+import React, { Suspense, useContext } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { CContainer, CSpinner } from '@coreui/react'
 
 // routes config
 import { routes } from '../routes'
+import { AuthContext } from '../context/AuthContext'
+import ProtectedRoute from './ProtectedRoute'
+import { homePathForRole } from '../constants/roles'
 
 /**
  * AppContent functional component
@@ -31,13 +34,16 @@ import { routes } from '../routes'
  * Renders all application routes within a container with:
  * - Suspense for lazy-loaded route components
  * - Spinner shown during component loading
- * - Default redirect to dashboard
+ * - Role-specific home redirect
  *
  * Memoized to prevent unnecessary re-renders when parent updates.
  *
  * @returns {React.ReactElement} Content container with routed views
  */
 const AppContent = () => {
+  const { user } = useContext(AuthContext)
+  const homePath = homePathForRole(user?.role)
+
   return (
     <CContainer className="px-4" lg>
       <Suspense fallback={<CSpinner color="primary" />}>
@@ -50,12 +56,17 @@ const AppContent = () => {
                   path={route.path}
                   exact={route.exact}
                   name={route.name}
-                  element={<route.element />}
+                  element={
+                    <ProtectedRoute allowedRoles={route.roles}>
+                      <route.element />
+                    </ProtectedRoute>
+                  }
                 />
               )
             )
           })}
-          <Route path="/" element={<Navigate to="dashboard" replace />} />
+          <Route path="/" element={<Navigate to={homePath} replace />} />
+          <Route path="*" element={<Navigate to={homePath} replace />} />
         </Routes>
       </Suspense>
     </CContainer>

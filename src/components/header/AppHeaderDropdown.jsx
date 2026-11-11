@@ -19,9 +19,11 @@ const AppHeaderDropdown = () => {
   const { user, logout } = useContext(AuthContext)
   const navigate = useNavigate()
 
-  const handleViewProfile = () => {
+  const handleViewProfile = (event) => {
+    event.preventDefault()
+
     if (user?.id) {
-      navigate(`/user-management/edit-user/${user?.id}`)
+      navigate(`/user-management/edit-user/${user.id}`)
     } else {
       console.error('User ID not found.')
     }

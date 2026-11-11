@@ -37,7 +37,7 @@ import { AppSidebarNav } from './AppSidebarNav'
 import { cilEducation } from '@coreui/icons'
 import { CAvatar } from '@coreui/react'
 import { useExam } from '../exam/ExamContext'
-import buildNav from '../_nav'
+import buildNav, { getNav } from '../_nav'
 import avatar from 'src/assets/images/avatars/default-prof-pic.jpg'
 import { AuthContext } from 'src/context/AuthContext'
 
@@ -59,11 +59,12 @@ const AppSidebar = () => {
   const sidebarShow = useSelector((state) => state.sidebarShow)
   const { exams, openCreate, openPreview } = useExam()
   const { user } = useContext(AuthContext)
-  const navigation = buildNav({
+  const navItems = buildNav({
     upcoming: exams.filter((e) => e.status === 'Upcoming').length,
     openCreate,
     openPreview,
   })
+  const navigation = getNav(user?.role, navItems)
 
   return (
     <CSidebar

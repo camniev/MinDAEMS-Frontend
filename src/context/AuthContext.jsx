@@ -25,6 +25,7 @@ const AuthProvider = ({ children }) => {
       id: decodedToken.nameid,
       username: decodedToken.unique_name,
       fullname: decodedToken.given_name,
+      email: decodedToken.email,
       role: decodedToken.role,
       mustChangePasswordOnFirstLogin: decodedToken.mustChangePasswordOnFirstLogin === 'true',
     }

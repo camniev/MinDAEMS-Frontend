@@ -12,10 +12,6 @@ import {
   CFormSwitch,
   CRow,
   CSpinner,
-  CToast,
-  CToastBody,
-  CToastClose,
-  CToaster,
 } from '@coreui/react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
@@ -38,9 +34,8 @@ import {
   faUser,
   faUsersViewfinder,
 } from '@fortawesome/free-solid-svg-icons'
-import { cilCheckCircle, cilXCircle } from '@coreui/icons'
-import CIcon from '@coreui/icons-react'
 import { AuthContext } from 'src/context/AuthContext'
+import { useToast } from 'src/context/ToastContext'
 import UserStatus from '../user-status/UserStatus'
 
 import avatar from './../../../assets/images/avatars/default-prof-pic.jpg'
@@ -98,6 +93,7 @@ const ViewUser = () => {
 
   const { user } = useContext(AuthContext)
   const userRole = user?.role
+  const notify = useToast()
 
   const isSuperUserOrAdmin = userRole === 'Super User' || userRole === 'Administrator'
 
@@ -110,10 +106,6 @@ const ViewUser = () => {
     mustChangePasswordOnFirstLogin: false,
   })
   const [listActiveUserTypes, setListActiveUserTypes] = useState([])
-
-  //state variable for toast
-  const [toast, addToast] = useState(0)
-  const toaster = useRef()
 
   //state variable for password change
   const [isPasswordChange, setIsPasswordChange] = useState(false)
@@ -262,7 +254,7 @@ const ViewUser = () => {
 
   const handleSaveUser = async () => {
     if (userDetails.passWord !== userDetails.confirmPassword) {
-      addToast(generateToast('error', 'Passwords do not match!'))
+      notify('Passwords do not match!', 'error')
       return
     }
     try {
@@ -295,9 +287,9 @@ const ViewUser = () => {
       if (isEditMode) {
         await fetchUserDetails()
       }
-      addToast(generateToast('success', `User ${isEditMode ? 'updated' : 'added'} successfully.`))
+      notify(`User ${isEditMode ? 'updated' : 'added'} successfully.`, 'success')
     } catch (error) {
-      addToast(generateToast('error', `Error ${isEditMode ? 'updating' : 'adding'} user.`))
+      notify(`Error ${isEditMode ? 'updating' : 'adding'} user.`, 'error')
     }
   }
 
@@ -344,31 +336,15 @@ const ViewUser = () => {
       }
 
       await fetchUserDetails()
-      addToast(generateToast('success', `User status updated successfully.`))
+      notify('User status updated successfully.', 'success')
     } catch (error) {
-      addToast(generateToast('error', `Failed to update user status.`))
+      notify('Failed to update user status.', 'error')
     }
   }
 
   const handleBackToList = () => {
     //console.log()
     navigate('/user-management/user-accounts-list/')
-  }
-
-  //toast function
-  const generateToast = (status, message) => {
-    const color = status === 'success' ? 'success' : 'danger'
-    const icon = status === 'success' ? cilCheckCircle : cilXCircle
-
-    return (
-      <CToast autohide={true} color={color} className="text-white align-items-center">
-        <div className="d-flex">
-          <CIcon icon={icon} className="toast-icon-m ms-2" size="xl" />
-          <CToastBody>{message}</CToastBody>
-          <CToastClose className="me-2 m-auto" white />
-        </div>
-      </CToast>
-    )
   }
 
   if (!userDetails && isEditMode) return <CSpinner color="dark" />
@@ -768,7 +744,6 @@ const ViewUser = () => {
           </CCol>
         </CRow>
       </CCol>
-      <CToaster className="p-3" placement="top-end" push={toast} ref={toaster} />
     </CRow>
   )
 }

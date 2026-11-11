@@ -9,7 +9,6 @@
  * - Theme detection from URL parameters and Redux state
  * - Lazy loading for all routes with loading spinner fallback
  * - Public routes (login, register, error pages)
- * - Applicant portal routes (own layout, outside DefaultLayout)
  * - Protected routes wrapped in DefaultLayout
  *
  * @module App
@@ -29,8 +28,6 @@ import { ToastProvider } from './context/ToastContext'
 
 // Containers
 const DefaultLayout = React.lazy(() => import('./layout/DefaultLayout'))
-const ApplicantLayout = React.lazy(() => import('./layout/ApplicantLayout'))
-
 // Pages
 const Login = React.lazy(() => import('./views/authentication/login/Login'))
 const Register = React.lazy(() => import('./views/authentication/register/Register'))
@@ -46,10 +43,6 @@ const PasswordChanged = React.lazy(
 )
 const Page404 = React.lazy(() => import('./views/error-pages/page404/Page404'))
 const Page500 = React.lazy(() => import('./views/error-pages/page500/Page500'))
-const ApplicantSchedules = React.lazy(() => import('./applicant/ApplicantSchedules'))
-const ApplicantExamDetails = React.lazy(() => import('./applicant/ApplicantExamDetails'))
-const ApplicantExamTaking = React.lazy(() => import('./applicant/ApplicantExamTaking'))
-
 // ROLES now lives in constants/roles.js (so ProtectedRoute and Login can use it
 // without importing App.jsx). Re-exported here so existing imports keep working.
 export { ROLES }
@@ -145,29 +138,11 @@ const App = () => {
             <Route exact path="/error-pages/404" name="Page 404" element={<Page404 />} />
             <Route exact path="/error-pages/500" name="Page 500" element={<Page500 />} />
 
-            {/* Applicant portal — own layout, so applicants never land inside the
-                HR shell. Unknown /applicant/* paths bounce back to the schedules
-                page rather than falling through to the HR catch-all below. */}
-            <Route
-              path="/applicant"
-              element={
-                <ProtectedRoute allowedRoles={[ROLES.APPLICANT]}>
-                  <ApplicantLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<Navigate to="schedules" replace />} />
-              <Route path="/applicant/schedules" element={<ApplicantSchedules />} />
-              <Route path="exam/:enrollmentId" element={<ApplicantExamDetails />} />
-              <Route path="exam/:enrollmentId/take" element={<ApplicantExamTaking />} />
-              <Route path="*" element={<Navigate to="/applicant/schedules" replace />} />
-            </Route>
-
             <Route
               path="*"
-              name="Home" 
+              name="Home"
               element={
-                <ProtectedRoute allowedRoles={HR_ROLES}>
+                <ProtectedRoute allowedRoles={[...HR_ROLES, ROLES.APPLICANT]}>
                   <DefaultLayout />
                 </ProtectedRoute>
               }

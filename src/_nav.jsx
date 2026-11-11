@@ -16,8 +16,7 @@
  * CNavTitle entries don't need `roles` — getNav() automatically hides a
  * title if every item under it (until the next title) gets filtered out.
  *
- * Use getNav(userRole) to get the filtered menu to render, rather than
- * importing `_nav` directly.
+ * Use getNav(userRole, navItems) to get the filtered menu to render.
  *
  * @module _nav
  */
@@ -122,7 +121,7 @@ const buildNav = ({ upcoming, openCreate, openPreview }) => [
     name: 'My Exam Schedules',
     to: '/applicant/schedules',
     icon: <CIcon icon={cilCalendar} customClassName="nav-icon" />,
-    roles: [ROLES.ADMIN, ROLES.PROCTOR],
+    roles: [ROLES.APPLICANT],
   },
   { component: CNavTitle, name: 'Quick Tools' },
   {
@@ -167,7 +166,7 @@ const isVisible = (item, userRole) => !item.roles || item.roles.includes(userRol
  * - CNavTitle: kept only if at least one non-title item follows it before
  *   the next title (so empty sections don't show a dangling header).
  */
-export const getNav = (userRole, navItems = _nav) => {
+export const getNav = (userRole, navItems) => {
   // First pass: filter items/groups by role (groups filtered recursively).
   const roleFiltered = navItems.reduce((acc, item) => {
     if (item.component === CNavTitle) {

@@ -1,6 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
 import { useToast } from 'src/context/ToastContext'
+import { AuthContext } from 'src/context/AuthContext'
+import { ROLES } from 'src/constants/roles'
 
 const ExamContext = createContext(null)
 export const useExam = () => useContext(ExamContext)
@@ -57,6 +59,7 @@ const normalizeExam = (apiExam) => ({
 })
 
 export const ExamProvider = ({ children }) => {
+  const { user } = useContext(AuthContext)
   const [exams, setExams] = useState([])
   const [examsLoading, setExamsLoading] = useState(true)
   const [examsError, setExamsError] = useState(null)
@@ -97,8 +100,13 @@ export const ExamProvider = ({ children }) => {
   }, [includeArchived, toast])
 
   useEffect(() => {
+    if (user?.role === ROLES.APPLICANT) {
+      setExamsLoading(false)
+      return
+    }
+
     fetchExams()
-  }, [fetchExams])
+  }, [fetchExams, user?.role])
 
   // Default to the first loaded exam once data arrives; stays put afterwards
   // so switching exams elsewhere in the app doesn't get reset by a refetch.

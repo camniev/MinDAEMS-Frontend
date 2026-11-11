@@ -13,4 +13,5 @@ export const HR_ROLES = [ROLES.ADMIN, ROLES.PROCTOR, ROLES.CHECKER]
 
 // Where each kind of user lands after login, and where they get sent if they
 // wander into a part of the app that isn't theirs.
-export const homePathForRole = (role) => (role === ROLES.APPLICANT ? '/applicant/schedules' : '/')
+export const homePathForRole = (role) =>
+  role === ROLES.APPLICANT ? '/applicant/schedules' : '/dashboard'
