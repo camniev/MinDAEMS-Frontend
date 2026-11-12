@@ -15,6 +15,10 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5026
 const GET_EXAM_SCHEDULES_ENDPOINT = `${API_BASE_URL}/Exam/GetExamSchedules`
 const saveExamQuestionsEndpoint = (examId) => `${API_BASE_URL}/Question/${examId}/SaveQuestions`
 const enrollApplicantsEndpoint = (examId) => `${API_BASE_URL}/Applicant/${examId}/EnrollApplicants`
+// Bulk, idempotent applicant account creation (see ApplicantAccounts.cs). The server
+// fills in the Employee/User/UserType details, so the client sends only name,
+// email and applicant code.
+const createApplicantAccountsEndpoint = () => `${API_BASE_URL}/Auth/RegisterApplicants`
 const removeEnrollmentEndpoint = (examId, examEnrollmentId) =>
   `${API_BASE_URL}/Applicant/${examId}/Enrollments/${examEnrollmentId}`
 const archiveExamEndpoint = (examId) => `${API_BASE_URL}/Exam/${examId}/Archive`
@@ -343,6 +347,23 @@ export const ExamProvider = ({ children }) => {
         })),
       }
       try {
+        // Step 1: make sure every applicant has a user account (username = email,
+        // password = applicant code). The server skips emails that already have
+        // one, so re-enrolling the same person in another exam is fine. Accounts
+        // go first: if this fails, nobody is enrolled without a way to log in,
+        // and a retry is safe because creation is idempotent.
+        const accountsResponse = await fetch(createApplicantAccountsEndpoint(), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        if (!accountsResponse.ok) {
+          throw new Error(
+            await extractErrorMessage(accountsResponse, 'Failed to create applicant accounts.'),
+          )
+        }
+
+        // Step 2: enroll them in this exam.
         const response = await fetch(enrollApplicantsEndpoint(selectedExam.id), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
