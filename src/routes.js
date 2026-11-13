@@ -65,18 +65,21 @@ export const routes = [
   {
     path: '/applicant/schedules',
     name: 'My Exam Schedules',
+    subtitle: 'sdsfd',
     element: ApplicantSchedules,
     roles: [ROLES.APPLICANT],
   },
   {
     path: '/applicant/exam/:enrollmentId',
     name: 'Exam Details',
+    subtitle: 'Review Exam Instructions and Start the Assessment.',
     element: ApplicantExamDetails,
     roles: [ROLES.APPLICANT],
   },
   {
     path: '/applicant/exam/:enrollmentId/take',
     name: 'Take Exam',
+    subtitle: 'Start the assessment and answer the questions.',
     element: ApplicantExamTaking,
     roles: [ROLES.APPLICANT],
   },

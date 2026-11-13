@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react'
-import { useLocation } from 'react-router-dom'
+import React, { useEffect, useRef, useContext } from 'react'
+import { matchPath, useLocation } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import {
   CButton,
@@ -18,6 +18,7 @@ import {
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilContrast, cilMagnifyingGlass, cilMenu, cilMoon, cilPlus, cilSun } from '@coreui/icons'
+import { AuthContext} from '../context/AuthContext'
 
 import { AppHeaderDropdown } from './index'
 import { useExam } from '../exam/ExamContext'
@@ -36,7 +37,11 @@ const AppHeader = () => {
   const sidebarShow = useSelector((state) => state.sidebarShow)
   const { pathname } = useLocation()
   const { search, setSearch, openCreate } = useExam()
-  const page = routes.find((r) => r.path === pathname) || routes[1]
+  const { user } = useContext(AuthContext)
+  const page = routes.find((route) => matchPath({ path: route.path, end: true }, pathname)) || routes[1]
+
+  const isAdmin = user?.role === 'Administrator'
+  const isProctor = user?.role === 'Proctor'
 
   useEffect(() => {
     const onScroll = () =>
@@ -58,21 +63,24 @@ const AppHeader = () => {
           <h5 className="mb-0 lh-sm">{page.name}</h5>
           <div className="small text-body-secondary d-none d-sm-block">{page.subtitle}</div>
         </div>
-        <CInputGroup size="sm" className="d-none d-md-flex w-auto me-3">
-          <CInputGroupText>
-            <CIcon icon={cilMagnifyingGlass} size="sm" />
-          </CInputGroupText>
-          <CFormInput
-            placeholder="Search exams, subjects..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ width: 200 }}
-          />
-        </CInputGroup>
-        <CButton color="primary" size="sm" onClick={openCreate}>
-          <CIcon icon={cilPlus} className="me-1" />{' '}
-          <span className="d-none d-sm-inline">Create Exam</span>
-        </CButton>
+        {isAdmin || isProctor ? (
+          <>
+            <CInputGroup size="sm" className="d-none d-md-flex w-auto me-3">
+              <CInputGroupText>
+                <CIcon icon={cilMagnifyingGlass} size="sm" />
+              </CInputGroupText>
+              <CFormInput
+                placeholder="Search exams, subjects..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                style={{ width: 200 }} />
+            </CInputGroup>
+            <CButton color="primary" size="sm" onClick={openCreate}>
+              <CIcon icon={cilPlus} className="me-1" />{' '}
+              <span className="d-none d-sm-inline">Create Exam</span>
+            </CButton>
+          </>
+        ) : ''}
         <CHeaderNav>
           <li className="nav-item py-1">
             <div className="vr h-100 mx-2 text-body text-opacity-75"></div>
