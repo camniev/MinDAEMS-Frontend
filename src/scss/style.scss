@@ -648,6 +648,14 @@ $btn-info-bg-color: #83c1ff;
 	}
 }
 
+// CHECKING AND GRADING
+.grading-essay p { margin: 0 0 .5rem; }
+.grading-essay ul, .grading-essay ol { padding-left: 1.5rem; margin-bottom: .5rem; }
+.grading-essay table { border-collapse: collapse; width: 100%; margin: .5rem 0; }
+.grading-essay th, .grading-essay td { border: 1px solid var(--cui-border-color); padding: .35rem .5rem; vertical-align: top; }
+.grading-essay th { background: var(--cui-tertiary-bg); }
+.grading-essay td > p, .grading-essay th > p { margin: 0; }
+
 // DARK MODE
 [data-coreui-theme="dark"] {
 	.mindaam-login-card-group {

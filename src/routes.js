@@ -6,6 +6,7 @@ const Schedules = React.lazy(() => import('./views/exam/Schedules'))
 const Builder = React.lazy(() => import('./views/exam/Builder'))
 const Applicants = React.lazy(() => import('./views/exam/Applicants'))
 const ApplicantSchedules = React.lazy(() => import('./applicant/ApplicantSchedules'))
+const CheckingAndGrading = React.lazy(() => import('./views/exam/CheckingAndGrading'))
 const ApplicantExamDetails = React.lazy(() => import('./applicant/ApplicantExamDetails'))
 const ApplicantExamTaking = React.lazy(() => import('./applicant/ApplicantExamTaking'))
 
@@ -42,6 +43,13 @@ export const routes = [
     name: 'Applicants Directory',
     subtitle: 'Manage enrolled candidates and send assessment invitations.',
     element: Applicants,
+    roles: HR_ROLES,
+  },
+  {
+    path: '/checking-and-grading',
+    name: 'Checking and Grading',
+    subtitle: 'Review and grade submitted assessments.',
+    element: CheckingAndGrading,
     roles: HR_ROLES,
   },
   {

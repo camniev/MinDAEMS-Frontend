@@ -118,6 +118,17 @@ const buildNav = ({ upcoming, openCreate, openPreview }) => [
   },
   {
     component: CNavItem,
+    name: 'Checking and Grading',
+    to: '/checking-and-grading',
+    icon: <CIcon icon={cilPencil} customClassName="nav-icon" />,
+    roles: [ROLES.ADMIN, ROLES.PROCTOR],
+  },
+  {
+    component: CNavTitle,
+    name: 'Applicant Tools',
+  },
+  {
+    component: CNavItem,
     name: 'My Exam Schedules',
     to: '/applicant/schedules',
     icon: <CIcon icon={cilCalendar} customClassName="nav-icon" />,
