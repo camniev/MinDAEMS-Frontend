@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import {
   CBadge,
   CButton,
@@ -13,15 +13,136 @@ import {
 import CIcon from '@coreui/icons-react'
 import {
   cilAlignLeft,
+  cilCloudUpload,
   cilCopy,
+  cilDescription,
+  cilExternalLink,
   cilSave,
   cilMediaPlay,
   cilPlus,
   cilTrash,
   cilX,
 } from '@coreui/icons'
-import { useExam } from 'src/exam/ExamContext'
+import { getAttachmentUrl, useExam } from 'src/exam/ExamContext'
 import { QUESTION_TYPES } from 'src/exam/data'
+
+const formatSize = (bytes) =>
+  bytes >= 1024 * 1024
+    ? `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+    : `${Math.max(1, Math.round((bytes || 0) / 1024))} KB`
+
+// Exam-level library of reference PDFs. Questions link to these below.
+const AttachmentsCard = () => {
+  const { selectedExam, uploadAttachment, deleteAttachment } = useExam()
+  const [uploading, setUploading] = useState(false)
+  const inputRef = useRef(null)
+  const attachments = selectedExam.attachments ?? []
+
+  const handleFile = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = '' // lets the same file be picked again later
+    if (!file) return
+    setUploading(true)
+    try {
+      await uploadAttachment(file)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleDelete = async (a) => {
+    const used = selectedExam.questions.filter((q) => q.attachmentId === a.id).length
+    const text = used
+      ? `"${a.fileName}" is used by ${used} question${used === 1 ? '' : 's'}. Remove it anyway? Those questions will lose their reference.`
+      : `Remove "${a.fileName}"?`
+    if (window.confirm(text)) await deleteAttachment(a.id)
+  }
+
+  return (
+    <CCard className="mb-3">
+      <CCardBody>
+        <div className="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+          <div>
+            <div className="fw-semibold">
+              <CIcon icon={cilDescription} className="me-2" />
+              Reference PDFs
+            </div>
+            <div className="small text-body-secondary">
+              Optional. Upload a PDF once, then link it to any question below. Applicants open it
+              while answering.
+            </div>
+          </div>
+          <div>
+            <input
+              ref={inputRef}
+              type="file"
+              accept="application/pdf,.pdf"
+              hidden
+              onChange={handleFile}
+            />
+            <CButton
+              color="primary"
+              variant="outline"
+              size="sm"
+              disabled={uploading}
+              onClick={() => inputRef.current?.click()}
+            >
+              {uploading ? (
+                <CSpinner size="sm" className="me-1" />
+              ) : (
+                <CIcon icon={cilCloudUpload} className="me-1" />
+              )}
+              Upload PDF
+            </CButton>
+          </div>
+        </div>
+
+        {attachments.length === 0 ? (
+          <div className="small fst-italic text-body-secondary border border-dashed rounded p-3 bg-body-tertiary">
+            No PDFs uploaded for this exam.
+          </div>
+        ) : (
+          <div className="d-grid gap-2">
+            {attachments.map((a) => {
+              const used = selectedExam.questions.filter((q) => q.attachmentId === a.id).length
+              return (
+                <div
+                  key={a.id}
+                  className="d-flex align-items-center gap-2 border rounded p-2 bg-body-tertiary"
+                >
+                  <CIcon icon={cilDescription} className="text-danger" />
+                  <div className="flex-grow-1 text-truncate">
+                    <span className="fw-semibold">{a.fileName}</span>
+                    <span className="small text-body-secondary ms-2">
+                      {formatSize(a.sizeBytes)} · used by {used} question{used === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                  <a
+                    className="btn btn-ghost-secondary btn-sm"
+                    href={getAttachmentUrl(selectedExam.id, a.id)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <CIcon icon={cilExternalLink} className="me-1" /> View
+                  </a>
+                  <CButton
+                    color="danger"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDelete(a)}
+                    aria-label={`Remove ${a.fileName}`}
+                  >
+                    <CIcon icon={cilTrash} />
+                  </CButton>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </CCardBody>
+    </CCard>
+  )
+}
 
 const Options = ({ q }) => {
   const { setCorrect, updateOptionText, deleteOption, addOption } = useExam()
@@ -84,7 +205,9 @@ const Options = ({ q }) => {
 }
 
 const QuestionCard = ({ q, index }) => {
-  const { updateQuestion, duplicateQuestion, deleteQuestion } = useExam()
+  const { selectedExam, updateQuestion, duplicateQuestion, deleteQuestion } = useExam()
+  const attachments = selectedExam.attachments ?? []
+  const linkMissing = q.attachmentId && !attachments.some((a) => a.id === q.attachmentId)
   return (
     <CCard className="mb-3">
       <CCardBody>
@@ -125,6 +248,29 @@ const QuestionCard = ({ q, index }) => {
           value={q.text}
           onChange={(e) => updateQuestion(q.id, { text: e.target.value })}
         />
+        <div className="d-flex align-items-center gap-2 mb-3">
+          <label className="small fw-semibold text-nowrap" htmlFor={`ref-${q.id}`}>
+            <CIcon icon={cilDescription} className="me-1" />
+            Reference PDF:
+          </label>
+          <CFormSelect
+            id={`ref-${q.id}`}
+            size="sm"
+            value={q.attachmentId ?? ''}
+            disabled={attachments.length === 0 && !linkMissing}
+            onChange={(e) => updateQuestion(q.id, { attachmentId: e.target.value || null })}
+          >
+            <option value="">
+              {attachments.length === 0 ? 'No PDFs uploaded for this exam' : 'None'}
+            </option>
+            {attachments.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.fileName}
+              </option>
+            ))}
+            {linkMissing && <option value={q.attachmentId}>(file no longer available)</option>}
+          </CFormSelect>
+        </div>
         <Options q={q} />
         <div className="d-flex justify-content-end gap-2 border-top pt-3 mt-3">
           <CButton
@@ -241,6 +387,8 @@ const BuilderBody = () => {
             />
           </CCardBody>
         </CCard>
+
+        <AttachmentsCard />
 
         {selectedExam.questions.map((q, i) => (
           <QuestionCard key={q.id} q={q} index={i} />

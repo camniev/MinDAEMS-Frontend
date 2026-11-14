@@ -16,7 +16,7 @@ import {
   CSpinner,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
-import { cilCheckCircle, cilClock, cilFullscreen } from '@coreui/icons'
+import { cilCheckCircle, cilClock, cilDescription, cilFullscreen } from '@coreui/icons'
 import { useApplicantAuth } from 'src/applicant/useApplicantAuth'
 import { detectFullscreen, useFullscreen } from 'src/applicant/useFullScreen'
 import { API_BASE_URL, extractErrorMessage, sendJson } from '../assets/api/Api'
@@ -27,6 +27,11 @@ const AUTOSAVE_DELAY_MS = 1000
 
 const examEndpoint = (enrollmentId, action) =>
   `${API_BASE_URL}/Applicant/MyExam/${enrollmentId}/${action}`
+
+// A reference PDF for a question. The server only serves it to the owner of this
+// enrollment while the attempt is open.
+const attachmentEndpoint = (enrollmentId, attachmentId) =>
+  `${API_BASE_URL}/Applicant/MyExam/${enrollmentId}/Attachments/${attachmentId}`
 
 const EMPTY_ANSWER = { selectedOptionIds: [], essayText: '' }
 
@@ -67,7 +72,7 @@ const exitFullscreen = () => {
   if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {})
 }
 
-const QuestionCard = ({ question, index, answer, updateAnswer }) => {
+const QuestionCard = ({ question, index, answer, updateAnswer, onViewAttachment }) => {
   const multi = question.type === 'checkbox'
   const selected = answer.selectedOptionIds
 
@@ -84,6 +89,26 @@ const QuestionCard = ({ question, index, answer, updateAnswer }) => {
             {question.points} {question.points === 1 ? 'pt' : 'pts'}
           </CBadge>
         </div>
+
+        {question.attachment && (
+          <div className="d-flex align-items-center gap-2 border rounded p-2 mb-3 bg-body-tertiary">
+            <CIcon icon={cilDescription} className="text-danger" />
+            <div className="flex-grow-1 text-truncate">
+              <div className="small fw-semibold">Reference document</div>
+              <div className="small text-body-secondary text-truncate">
+                {question.attachment.fileName}
+              </div>
+            </div>
+            <CButton
+              size="sm"
+              color="primary"
+              variant="outline"
+              onClick={() => onViewAttachment(question.attachment)}
+            >
+              View PDF
+            </CButton>
+          </div>
+        )}
 
         {question.type === 'essay' ? (
           <EssayEditor
@@ -157,6 +182,11 @@ const ApplicantExamTaking = () => {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState(null)
   const [autoSubmitted, setAutoSubmitted] = useState(false)
+
+  // Reference PDF viewer. Shown in a modal on this page: opening a new tab would
+  // leave the exam page (and its full screen), which this exam doesn't allow.
+  const [pdfViewer, setPdfViewer] = useState(null) // { attachment, url, loading, error }
+  const pdfCacheRef = useRef(new Map()) // attachment id -> blob URL, so reopening is instant
 
   const deadlineRef = useRef(0) // browser-clock time the attempt ends
   const answersRef = useRef(answers)
@@ -307,6 +337,47 @@ const ApplicantExamTaking = () => {
     [authedFetch, enrollmentId, endAttempt],
   )
 
+  // ---- reference PDFs ----
+  // Fetched with authedFetch (a plain <iframe src> or link can't send the login
+  // token) and shown from a blob URL.
+  useEffect(() => {
+    const cache = pdfCacheRef.current
+    return () => {
+      cache.forEach((url) => URL.revokeObjectURL(url))
+      cache.clear()
+    }
+  }, [])
+
+  const openPdf = useCallback(
+    async (attachment) => {
+      const cached = pdfCacheRef.current.get(attachment.id)
+      setPdfViewer({ attachment, url: cached ?? null, loading: !cached, error: null })
+      if (cached) return
+      const patch = (change) =>
+        setPdfViewer((v) => (v && v.attachment.id === attachment.id ? { ...v, ...change } : v))
+      try {
+        const response = await authedFetch(attachmentEndpoint(enrollmentId, attachment.id))
+        if (response.status === 409 || response.status === 410) {
+          // time ran out or HR closed the exam while the PDF was being opened
+          setPdfViewer(null)
+          endAttempt(await extractErrorMessage(response, 'This exam can no longer be taken.'))
+          return
+        }
+        if (!response.ok) {
+          throw new Error(await extractErrorMessage(response, 'Failed to load the document.'))
+        }
+        const blob = await response.blob()
+        const url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }))
+        pdfCacheRef.current.set(attachment.id, url)
+        patch({ url, loading: false })
+      } catch (err) {
+        console.error('Failed to load reference PDF:', err)
+        patch({ loading: false, error: err.message || 'Failed to load the document.' })
+      }
+    },
+    [authedFetch, enrollmentId, endAttempt],
+  )
+
   // ---- countdown (from the server's seconds-remaining, not the clock) ----
   useEffect(() => {
     if (phase !== 'ready') return undefined
@@ -432,6 +503,7 @@ const ApplicantExamTaking = () => {
             index={i}
             answer={answerOf(q)}
             updateAnswer={updateAnswer}
+            onViewAttachment={openPdf}
           />
         ))
       ) : (
@@ -494,6 +566,50 @@ const ApplicantExamTaking = () => {
           </CButton>
         </div>
       </div>
+
+      {/* Hidden together with the questions if the applicant leaves full screen. */}
+      <CModal
+        visible={Boolean(pdfViewer) && isFullscreen}
+        alignment="center"
+        size="xl"
+        onClose={() => setPdfViewer(null)}
+      >
+        <CModalHeader>
+          <CModalTitle className="text-truncate">
+            {pdfViewer?.attachment.fileName ?? 'Reference document'}
+          </CModalTitle>
+        </CModalHeader>
+        <CModalBody>
+          {pdfViewer?.loading && (
+            <div className="text-center text-body-secondary py-5">
+              <CSpinner size="sm" className="me-2" />
+              Loading document…
+            </div>
+          )}
+          {pdfViewer?.error && <CAlert color="danger">{pdfViewer.error}</CAlert>}
+          {pdfViewer?.url && (
+            <>
+              <iframe
+                title={pdfViewer.attachment.fileName}
+                src={pdfViewer.url}
+                style={{ width: '100%', height: '70vh', border: 0 }}
+              />
+              <div className="small text-body-secondary mt-2">
+                Can&apos;t see the document?{' '}
+                <a href={pdfViewer.url} download={pdfViewer.attachment.fileName}>
+                  Download it
+                </a>
+                . Your timer keeps running while this window is open.
+              </div>
+            </>
+          )}
+        </CModalBody>
+        <CModalFooter>
+          <CButton color="secondary" variant="outline" onClick={() => setPdfViewer(null)}>
+            Close
+          </CButton>
+        </CModalFooter>
+      </CModal>
 
       <CModal
         visible={confirmOpen}

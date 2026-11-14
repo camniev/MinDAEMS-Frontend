@@ -64,6 +64,15 @@ const TYPE_LABELS = {
   essay: 'Essay',
 }
 
+const ESSAY_CSS = `
+.grading-essay p { margin: 0 0 .5rem; }
+.grading-essay ul, .grading-essay ol { padding-left: 1.5rem; margin-bottom: .5rem; }
+.grading-essay table { border-collapse: collapse; width: 100%; margin: .5rem 0; }
+.grading-essay th, .grading-essay td { border: 1px solid var(--cui-border-color); padding: .35rem .5rem; vertical-align: top; }
+.grading-essay th { background: var(--cui-tertiary-bg); }
+.grading-essay td > p, .grading-essay th > p { margin: 0; }
+`
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -509,6 +518,8 @@ const CheckingAndGrading = ({ initialExamId }) => {
 
   return (
     <>
+      <style>{ESSAY_CSS}</style>
+
       <CCard className="mb-4">
         <CCardBody className="d-flex flex-wrap align-items-end justify-content-between gap-3">
           <div style={{ minWidth: '18rem', flex: '1 1 24rem', maxWidth: '36rem' }}>
@@ -603,10 +614,11 @@ const CheckingAndGrading = ({ initialExamId }) => {
               {visibleEnrollments.map((e) => (
                 <CListGroupItem
                   key={e.examEnrollmentId}
-                  component="button"
-                  type="button"
+                  action
+                  tabIndex={0}
                   active={e.examEnrollmentId === selectedId}
                   onClick={() => selectEnrollment(e.examEnrollmentId)}
+                  onKeyDown={(ev) => ev.key === 'Enter' && selectEnrollment(e.examEnrollmentId)}
                   className="text-start"
                 >
                   <div className="fw-semibold text-truncate">{e.applicantName}</div>

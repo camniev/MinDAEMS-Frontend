@@ -25,6 +25,13 @@ const archiveExamEndpoint = (examId) => `${API_BASE_URL}/Exam/${examId}/Archive`
 const restoreExamEndpoint = (examId) => `${API_BASE_URL}/Exam/${examId}/Restore`
 const openExamEndpoint = (examId) => `${API_BASE_URL}/Exam/${examId}/Open`
 const closeExamEndpoint = (examId) => `${API_BASE_URL}/Exam/${examId}/Close`
+// Reference PDFs belong to the exam (one upload can be linked from several questions).
+const attachmentsEndpoint = (examId) => `${API_BASE_URL}/Exam/${examId}/Attachments`
+const attachmentEndpoint = (examId, attachmentId) =>
+  `${API_BASE_URL}/Exam/${examId}/Attachments/${attachmentId}`
+// Used by the Builder for its "View" link.
+export const getAttachmentUrl = attachmentEndpoint
+const MAX_ATTACHMENT_MB = 10 // keep in step with the server limit
 
 // Canonical status strings, matching what GetExamSchedules now computes.
 // Upcoming/Ongoing/Closed are derived server-side from date/time; Archived
@@ -231,6 +238,9 @@ export const ExamProvider = ({ children }) => {
           text: q.text,
           points: q.points,
           required: q.required,
+          // Questions get fresh ids on every save, but attachments have their own
+          // stable ids, so the link survives a re-save.
+          attachmentId: q.attachmentId ?? null,
           options: (q.options || []).map((o) => ({ text: o.text, isCorrect: o.isCorrect })),
         })),
       }
@@ -248,6 +258,62 @@ export const ExamProvider = ({ children }) => {
       } catch (error) {
         console.error('Failed to save exam questions:', error)
         toast(error.message || 'Failed to save exam questions.', 'error')
+      }
+    },
+    // Reference PDFs. Uploaded straight away (not with "Save Questionnaire"): the
+    // file is stored on the server and added to the exam locally, so unsaved question
+    // edits are not lost to a refetch. LINKING a PDF to a question (q.attachmentId)
+    // is saved with the questionnaire like any other question field.
+    uploadAttachment: async (file) => {
+      if (!selectedExam || !file) return null
+      const examId = selectedExam.id
+      if (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
+        toast('Only PDF files can be attached.', 'error')
+        return null
+      }
+      if (file.size > MAX_ATTACHMENT_MB * 1024 * 1024) {
+        toast(`That PDF is larger than ${MAX_ATTACHMENT_MB} MB.`, 'error')
+        return null
+      }
+      try {
+        const form = new FormData()
+        form.append('file', file) // no Content-Type header: the browser adds the boundary
+        const response = await fetch(attachmentsEndpoint(examId), { method: 'POST', body: form })
+        if (!response.ok) {
+          throw new Error(await extractErrorMessage(response, 'Failed to upload the PDF.'))
+        }
+        const saved = await response.json() // { id, fileName, sizeBytes }
+        patchExam(examId, (e) => ({ ...e, attachments: [...(e.attachments ?? []), saved] }))
+        toast('PDF attached.', 'success')
+        return saved
+      } catch (error) {
+        console.error('Failed to upload attachment:', error)
+        toast(error.message || 'Failed to upload the PDF.', 'error')
+        return null
+      }
+    },
+    deleteAttachment: async (attachmentId) => {
+      if (!selectedExam) return false
+      const examId = selectedExam.id
+      try {
+        const response = await fetch(attachmentEndpoint(examId, attachmentId), { method: 'DELETE' })
+        if (!response.ok) {
+          throw new Error(await extractErrorMessage(response, 'Failed to remove the PDF.'))
+        }
+        patchExam(examId, (e) => ({
+          ...e,
+          attachments: (e.attachments ?? []).filter((a) => a.id !== attachmentId),
+          // the server clears the links too; mirror that so the Builder doesn't resave them
+          questions: e.questions.map((q) =>
+            q.attachmentId === attachmentId ? { ...q, attachmentId: null } : q,
+          ),
+        }))
+        toast('PDF removed.', 'info')
+        return true
+      } catch (error) {
+        console.error('Failed to delete attachment:', error)
+        toast(error.message || 'Failed to remove the PDF.', 'error')
+        return false
       }
     },
     addQuestion: (type) => {
@@ -272,6 +338,7 @@ export const ExamProvider = ({ children }) => {
         text: 'New Question Prompt',
         points: 5,
         required: true,
+        attachmentId: null,
         options: opts,
       }
       patchSelected((e) => ({ ...e, questions: [...e.questions, q] }))
