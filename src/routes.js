@@ -73,7 +73,7 @@ export const routes = [
   {
     path: '/applicant/schedules',
     name: 'My Exam Schedules',
-    subtitle: 'sdsfd',
+    subtitle: 'View your upcoming exams and access the assessment portal.',
     element: ApplicantSchedules,
     roles: [ROLES.APPLICANT],
   },
