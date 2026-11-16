@@ -84,9 +84,17 @@ export const ExamProvider = ({ children }) => {
   const notify = useToast() ?? (() => {})
   useEffect(() => () => { isMounted.current = false }, [])
 
+  // Keep `toast` the same function forever. If its identity changed whenever the toast
+  // provider re-rendered (which happens every time a toast is shown), fetchExams below
+  // would change too and its effect would refetch the whole exam list — wiping any local
+  // changes (an attachment just uploaded, unsaved question edits) right after the toast.
+  const notifyRef = useRef(notify)
+  useEffect(() => {
+    notifyRef.current = notify
+  })
   const toast = useCallback((message, type = 'info') => {
-    notify(message, type)
-  }, [notify])
+    notifyRef.current(message, type)
+  }, [])
 
   const fetchExams = useCallback(async () => {
     setExamsLoading(true)
