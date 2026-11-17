@@ -17,7 +17,11 @@ const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const refreshTimer = useRef(null)
-  const refreshInProgress = useRef(false)
+  // The refresh currently running, if any. Everyone who asks meanwhile gets the same one
+  // (and its result) instead of starting a second request or getting nothing back.
+  const refreshPromise = useRef(null)
+  // Always the latest token, for code that runs outside a render (timers, event handlers).
+  const authTokenRef = useRef(null)
 
   const setUserFromToken = (token) => {
     const decodedToken = jwtDecode(token)
@@ -33,32 +37,59 @@ const AuthProvider = ({ children }) => {
     return nextUser
   }
 
-  const refreshAccessToken = useCallback(async () => {
-    if (refreshInProgress.current) return
+  // Resolves to the new access token, or null if there is no session / it couldn't be renewed.
+  const refreshAccessToken = useCallback(() => {
+    if (refreshPromise.current) return refreshPromise.current
 
-    refreshInProgress.current = true
-    try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/Auth/refresh-token`,
-        {},
-        { withCredentials: true },
-      )
-      const newAccessToken = response.data.accessToken
-      setAuthToken(newAccessToken)
-      setUserFromToken(newAccessToken)
-    } catch (error) {
-      console.error('Failed to refresh access token: ', error)
-      if (error.response && error.response.status >= 400 && error.response.status < 500) {
-        setAuthToken(null)
-        setUser(null)
-      } else {
-        refreshTimer.current = setTimeout(refreshAccessToken, 30 * 1000)
+    refreshPromise.current = (async () => {
+      try {
+        const response = await axios.post(
+          `${import.meta.env.VITE_API_BASE_URL}/Auth/refresh-token`,
+          {},
+          { withCredentials: true },
+        )
+        const newAccessToken = response.data.accessToken
+        authTokenRef.current = newAccessToken
+        setAuthToken(newAccessToken)
+        setUserFromToken(newAccessToken)
+        return newAccessToken
+      } catch (error) {
+        console.error('Failed to refresh access token: ', error)
+        const status = error.response?.status
+        if (status === 401 || status === 403) {
+          // The server says this session is over (no or invalid cookie, expired, deactivated).
+          authTokenRef.current = null
+          setAuthToken(null)
+          setUser(null)
+        } else {
+          // Network drop, 5xx, 429…: that says nothing about the session, so keep it and retry.
+          // (Before, every 4xx — including 408/429 — signed the person out.)
+          clearTimeout(refreshTimer.current)
+          refreshTimer.current = setTimeout(refreshAccessToken, 15 * 1000)
+        }
+        return null
+      } finally {
+        refreshPromise.current = null
+        setLoading(false)
       }
-    } finally {
-      refreshInProgress.current = false
-      setLoading(false)
-    }
+    })()
+
+    return refreshPromise.current
   }, [])
+
+  // A valid access token for a request that is about to be made: renews it first if it has
+  // expired or is about to. Use this (and refreshAccessToken() after a 401) in authedFetch.
+  const getAccessToken = useCallback(async () => {
+    const token = authTokenRef.current
+    if (!token) return null
+    try {
+      const { exp } = jwtDecode(token)
+      if (typeof exp === 'number' && exp * 1000 - Date.now() > 30 * 1000) return token
+    } catch {
+      // unreadable token: fall through and renew it
+    }
+    return (await refreshAccessToken()) ?? null
+  }, [refreshAccessToken])
 
   useEffect(() => {
     refreshAccessToken()
@@ -73,6 +104,31 @@ const AuthProvider = ({ children }) => {
     return () => clearTimeout(refreshTimer.current)
   }, [authToken, refreshAccessToken])
 
+  // Timers don't run while a laptop sleeps and are throttled in background tabs, so a token can
+  // expire without the scheduled refresh ever firing. Check again whenever the person comes
+  // back to the tab or the network returns.
+  useEffect(() => {
+    const refreshIfStale = () => {
+      if (document.visibilityState === 'hidden') return
+      const token = authTokenRef.current
+      if (!token) return
+      try {
+        const { exp } = jwtDecode(token)
+        if (typeof exp !== 'number' || exp * 1000 - Date.now() < 2 * 60 * 1000) refreshAccessToken()
+      } catch {
+        refreshAccessToken()
+      }
+    }
+    document.addEventListener('visibilitychange', refreshIfStale)
+    window.addEventListener('focus', refreshIfStale)
+    window.addEventListener('online', refreshIfStale)
+    return () => {
+      document.removeEventListener('visibilitychange', refreshIfStale)
+      window.removeEventListener('focus', refreshIfStale)
+      window.removeEventListener('online', refreshIfStale)
+    }
+  }, [refreshAccessToken])
+
   // useEffect(() => {
   //   console.log(user)
   // }, [user])
@@ -85,6 +141,7 @@ const AuthProvider = ({ children }) => {
         { withCredentials: true },
       )
       const accessToken = response.data.accessToken
+      authTokenRef.current = accessToken
       setAuthToken(accessToken)
       // Returned so the caller can send each role to its own home page.
       return setUserFromToken(accessToken)
@@ -113,18 +170,18 @@ const AuthProvider = ({ children }) => {
   const logout = async () => {
     //console.log('Auth token for logging out: ' + authToken)
     try {
+      // withCredentials: the server revokes the session using the refresh cookie, and the
+      // browser only sends it (and honours the cookie deletion in the reply) with this set.
       await axios.post(
         `${import.meta.env.VITE_API_BASE_URL}/Auth/Logout`,
         {},
-        {
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-          },
-        },
+        { withCredentials: true },
       )
     } catch (error) {
       console.error('Logout failed: ', error)
     } finally {
+      clearTimeout(refreshTimer.current)
+      authTokenRef.current = null
       setAuthToken(null)
       setUser(null)
     }
@@ -139,7 +196,19 @@ const AuthProvider = ({ children }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ authToken, user, login, logout, loading, hasRole, hasAnyRole }}>
+    <AuthContext.Provider
+      value={{
+        authToken,
+        user,
+        login,
+        logout,
+        loading,
+        hasRole,
+        hasAnyRole,
+        refreshAccessToken,
+        getAccessToken,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )

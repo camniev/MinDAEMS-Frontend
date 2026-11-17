@@ -156,13 +156,12 @@ const App = () => {
 }
 
 const LoginRedirect = () => {
-  const { user, authToken } = React.useContext(AuthContext)
+  const { user, loading } = React.useContext(AuthContext)
 
-  if (authToken === null && !document.cookie.includes('refreshToken=')) {
-    return <Login />
-  }
-
-  if (!user && authToken) {
+  // While the first silent refresh is running we can't know yet whether there is a session.
+  // The old check looked for the refresh cookie in document.cookie, but that cookie is
+  // HttpOnly, so JavaScript can never see it: the check was always "no cookie".
+  if (loading) {
     return <CSpinner color="primary" variant="grow" />
   }
 
