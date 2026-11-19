@@ -19,6 +19,9 @@ const enrollApplicantsEndpoint = (examId) => `${API_BASE_URL}/Applicant/${examId
 // fills in the Employee/User/UserType details, so the client sends only name,
 // email and applicant code.
 const createApplicantAccountsEndpoint = () => `${API_BASE_URL}/Auth/RegisterApplicants`
+// Emails (and, if needed, creates/updates the login for) one enrollment's applicant.
+const resendInviteEndpoint = (examEnrollmentId) =>
+  `${API_BASE_URL}/Auth/ResendApplicantInvite/${examEnrollmentId}`
 const removeEnrollmentEndpoint = (examId, examEnrollmentId) =>
   `${API_BASE_URL}/Applicant/${examId}/Enrollments/${examEnrollmentId}`
 const archiveExamEndpoint = (examId) => `${API_BASE_URL}/Exam/${examId}/Archive`
@@ -437,6 +440,9 @@ export const ExamProvider = ({ children }) => {
             await extractErrorMessage(accountsResponse, 'Failed to create applicant accounts.'),
           )
         }
+        // { created, alreadyExisted, emailsQueued } — the server emails each NEW account its
+        // login details in the background.
+        const accounts = await accountsResponse.json().catch(() => null)
 
         // Step 2: enroll them in this exam.
         const response = await fetch(enrollApplicantsEndpoint(selectedExam.id), {
@@ -449,7 +455,12 @@ export const ExamProvider = ({ children }) => {
         }
         const result = await response.json().catch(() => null)
         await fetchExams()
-        toast(result?.message ?? message, 'success')
+        const emailNote = accounts?.emailsQueued
+          ? ` Login details are being emailed to ${accounts.emailsQueued} new applicant${
+              accounts.emailsQueued === 1 ? '' : 's'
+            }.`
+          : ''
+        toast(`${result?.message ?? message}${emailNote}`, 'success')
       } catch (error) {
         console.error('Failed to enroll applicants:', error)
         toast(error.message || 'Failed to enroll applicants.', 'error')
@@ -475,7 +486,22 @@ export const ExamProvider = ({ children }) => {
       }
     },
     // Still local-only — no email-sending endpoint exists yet.
-    resendInvite: (email) => toast(`Invitation & access pass code re-sent to ${email}`, 'success'),
+    // Sends the applicant their login details for this enrollment. Resolves true/false so the
+    // button can show a spinner while the server sends the email.
+    resendInvite: async (examEnrollmentId, email) => {
+      try {
+        const response = await fetch(resendInviteEndpoint(examEnrollmentId), { method: 'POST' })
+        if (!response.ok) {
+          throw new Error(await extractErrorMessage(response, 'Failed to send the login details.'))
+        }
+        toast(`Login details sent to ${email}.`, 'success')
+        return true
+      } catch (error) {
+        console.error('Failed to resend invite:', error)
+        toast(error.message || 'Failed to send the login details.', 'error')
+        return false
+      }
+    },
   }
 
   const value = useMemo(

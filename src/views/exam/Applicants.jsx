@@ -38,6 +38,7 @@ const Applicants = () => {
   } = useExam()
   const [status, setStatus] = useState('all')
   const [query, setQuery] = useState('')
+  const [sendingId, setSendingId] = useState(null) // enrollment whose email is being sent
 
   // exams now loads asynchronously from the API, so selectedExam is null
   // until the first fetch resolves (or if it fails, or the list is empty).
@@ -194,10 +195,22 @@ const Applicants = () => {
                     color="secondary"
                     variant="ghost"
                     size="sm"
-                    title="Resend Passcode Invite"
-                    onClick={() => resendInvite(e.email)}
+                    title="Email login details (applicant code)"
+                    disabled={sendingId === e.examEnrollmentId}
+                    onClick={async () => {
+                      setSendingId(e.examEnrollmentId)
+                      try {
+                        await resendInvite(e.examEnrollmentId, e.email)
+                      } finally {
+                        setSendingId(null)
+                      }
+                    }}
                   >
-                    <CIcon icon={cilPaperPlane} />
+                    {sendingId === e.examEnrollmentId ? (
+                      <CSpinner size="sm" />
+                    ) : (
+                      <CIcon icon={cilPaperPlane} />
+                    )}
                   </CButton>
                   <CButton
                     color="danger"
