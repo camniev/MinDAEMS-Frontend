@@ -23,6 +23,7 @@ import { AuthContext} from '../context/AuthContext'
 import { AppHeaderDropdown } from './index'
 import { useExam } from '../exam/ExamContext'
 import { routes } from '../routes'
+import ProctorAlerts from '../assets/helpers/ProctorAlerts'
 
 const THEMES = [
   ['light', 'Light', cilSun],
@@ -82,9 +83,17 @@ const AppHeader = () => {
           </>
         ) : ''}
         <CHeaderNav>
-          <li className="nav-item py-1">
-            <div className="vr h-100 mx-2 text-body text-opacity-75"></div>
-          </li>
+          {isAdmin || isProctor ? (
+            <>
+              <li className="nav-item py-1">
+                <div className="vr h-100 mx-2 text-body text-opacity-75"></div>
+              </li>
+              <ProctorAlerts />
+              <li className="nav-item py-1">
+                <div className="vr h-100 mx-2 text-body text-opacity-75"></div>
+              </li>
+            </>
+          ) : ''}
           <CDropdown variant="nav-item" placement="bottom-end">
             <CDropdownToggle caret={false}>
               <CIcon icon={THEMES.find(([k]) => k === colorMode)?.[2] || cilSun} size="lg" />

@@ -205,6 +205,13 @@ const ApplicantExamDetails = () => {
                     are required. You can flag any question to review before final submission.
                   </span>
                 </li>
+                <li className="d-flex align-items-start gap-2">
+                  <CIcon icon={cilFullscreen} className="text-danger mt-1 flex-shrink-0" size="sm" />
+                  <span>
+                    Leaving full screen or switching to another window or tab during the exam is
+                    recorded and reported to the proctor.
+                  </span>
+                </li>
               </ul>
               <div className="border-top pt-3">
                 <CFormCheck

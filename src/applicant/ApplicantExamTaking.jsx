@@ -30,6 +30,7 @@ import { useApplicantAuth } from 'src/applicant/useApplicantAuth'
 import { detectFullscreen, useFullscreen } from 'src/applicant/useFullScreen'
 import { API_BASE_URL, extractErrorMessage, sendJson } from '../assets/api/Api'
 import EssayEditor from './EssayEditor'
+import { useExamIntegrityReporter } from './useExamIntegrityReporter'
 import PortalShell, { PortalCenter, PortalIcon } from './ExamPortalShell'
 
 // Answers are saved this long after the applicant stops changing something.
@@ -454,6 +455,14 @@ const ApplicantExamTaking = () => {
     },
     [authedFetch, enrollmentId, endAttempt],
   )
+
+  // Tells the proctor (via the server) when the applicant leaves full screen or the page loses focus.
+  useExamIntegrityReporter({
+    enabled: phase === 'ready',
+    enrollmentId,
+    authedFetch,
+    isFullscreen,
+  })
 
   // ---- reference PDFs ----
   // Fetched with authedFetch (a plain <iframe src> or link can't send the login

@@ -39,12 +39,12 @@ const ApplicantSchedules = () => {
 
   return (
     <>
-      <div className="mb-4">
+      {/* <div className="mb-4">
         <h4 className="mb-0">My Exam Schedules</h4>
         <div className="small text-body-secondary">
           Signed in as <strong>{user?.fullname || user?.username}</strong>
         </div>
-      </div>
+      </div> */}
 
       {loading && (
         <div className="text-center text-body-secondary py-5">
