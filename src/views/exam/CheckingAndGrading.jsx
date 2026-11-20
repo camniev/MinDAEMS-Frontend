@@ -16,8 +16,17 @@ import {
   CSpinner,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
-import { cilCheckCircle, cilPencil, cilReload, cilSave, cilWarning, cilXCircle } from '@coreui/icons'
+import {
+  cilCheckCircle,
+  cilPencil,
+  cilPrint,
+  cilReload,
+  cilSave,
+  cilWarning,
+  cilXCircle,
+} from '@coreui/icons'
 import { API_BASE_URL, extractErrorMessage } from 'src/assets/api/Api'
+import { usePrintSubmissions } from 'src/print/PrintSubmissions'
 
 // ---------------------------------------------------------------------------
 // API. The exam list endpoint already exists. The three /Grading endpoints are
@@ -335,6 +344,7 @@ const CheckingAndGrading = ({ initialExamId }) => {
   const [baseline, setBaseline] = useState({})
 
   const [saving, setSaving] = useState(false)
+  const { print, printing, notice: printNotice, clearNotice, printHost } = usePrintSubmissions()
   const [notice, setNotice] = useState(null) // { color, text }
 
   const dirty = JSON.stringify(marks) !== JSON.stringify(baseline)
@@ -554,6 +564,11 @@ const CheckingAndGrading = ({ initialExamId }) => {
       )}
 
       {notice && !selectedId && <CAlert color={notice.color}>{notice.text}</CAlert>}
+      {printNotice && (
+        <CAlert color={printNotice.color} dismissible onClose={clearNotice}>
+          {printNotice.text}
+        </CAlert>
+      )}
 
       <CRow className="g-4 align-items-start">
         {/* ---------------- Roster ---------------- */}
@@ -586,6 +601,23 @@ const CheckingAndGrading = ({ initialExamId }) => {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
+              <CButton
+                size="sm"
+                color="secondary"
+                variant="outline"
+                className="w-100 mt-2"
+                disabled={printing || !examId || visibleEnrollments.every((e) => !e.submittedAt)}
+                title="Print the questionnaire with each listed applicant's answers, for manual checking"
+                onClick={() =>
+                  print(
+                    examId,
+                    visibleEnrollments.filter((e) => e.submittedAt).map((e) => e.examEnrollmentId),
+                  )
+                }
+              >
+                {printing ? <CSpinner size="sm" className="me-1" /> : <CIcon icon={cilPrint} className="me-1" />}
+                Print answers for checking ({visibleEnrollments.filter((e) => e.submittedAt).length})
+              </CButton>
             </CCardBody>
 
             {rosterState === 'loading' && (
@@ -742,6 +774,16 @@ const CheckingAndGrading = ({ initialExamId }) => {
                     </div>
                   </div>
                   <div className="d-flex flex-wrap gap-2">
+                    <CButton
+                      color="secondary"
+                      variant="outline"
+                      onClick={() => print(examId, [selectedId])}
+                      disabled={printing}
+                      title="Print this applicant's questionnaire and answers for manual checking"
+                    >
+                      <CIcon icon={cilPrint} className="me-1" />
+                      Print
+                    </CButton>
                     <CButton color="secondary" variant="outline" onClick={rerunAutoCheck} disabled={saving}>
                       <CIcon icon={cilReload} className="me-1" />
                       Re-run auto-check
@@ -766,6 +808,7 @@ const CheckingAndGrading = ({ initialExamId }) => {
           )}
         </CCol>
       </CRow>
+      {printHost}
     </>
   )
 }

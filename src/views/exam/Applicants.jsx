@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import {
+  CAlert,
   CAvatar,
   CBadge,
   CButton,
@@ -20,9 +21,17 @@ import {
   CSpinner,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
-import { cilMagnifyingGlass, cilPaperPlane, cilPeople, cilTrash, cilUserPlus } from '@coreui/icons'
+import {
+  cilMagnifyingGlass,
+  cilPaperPlane,
+  cilPeople,
+  cilPrint,
+  cilTrash,
+  cilUserPlus,
+} from '@coreui/icons'
 import { useExam } from 'src/exam/ExamContext'
 import { APPLICANT_COLOR } from 'src/exam/data'
+import { usePrintSubmissions } from 'src/print/PrintSubmissions'
 
 const STATUSES = ['all', 'Invited', 'Registered', 'Completed']
 
@@ -39,6 +48,7 @@ const Applicants = () => {
   const [status, setStatus] = useState('all')
   const [query, setQuery] = useState('')
   const [sendingId, setSendingId] = useState(null) // enrollment whose email is being sent
+  const { print, printing, notice, clearNotice, printHost } = usePrintSubmissions()
 
   // exams now loads asynchronously from the API, so selectedExam is null
   // until the first fetch resolves (or if it fails, or the list is empty).
@@ -96,9 +106,22 @@ const Applicants = () => {
                 ))}
               </CFormSelect>
             </div>
-            <CButton color="primary" size="sm" onClick={openAddApplicant}>
-              <CIcon icon={cilUserPlus} className="me-1" /> Add Applicants
-            </CButton>
+            <div className="d-flex flex-wrap gap-2">
+              <CButton
+                color="secondary"
+                variant="outline"
+                size="sm"
+                disabled={printing || rows.length === 0}
+                title="Print the questionnaire with each listed applicant's answers (one applicant per page)"
+                onClick={() => print(selectedExam.id, rows.map((r) => r.examEnrollmentId))}
+              >
+                {printing ? <CSpinner size="sm" className="me-1" /> : <CIcon icon={cilPrint} className="me-1" />}
+                Print Answers ({rows.length})
+              </CButton>
+              <CButton color="primary" size="sm" onClick={openAddApplicant}>
+                <CIcon icon={cilUserPlus} className="me-1" /> Add Applicants
+              </CButton>
+            </div>
           </div>
           <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 border-top pt-3">
             <CInputGroup size="sm" style={{ maxWidth: 320 }}>
@@ -129,6 +152,12 @@ const Applicants = () => {
           </div>
         </CCardBody>
       </CCard>
+
+      {notice && (
+        <CAlert color={notice.color} dismissible onClose={clearNotice}>
+          {notice.text}
+        </CAlert>
+      )}
 
       <CCard>
         <CTable align="middle" hover responsive className="mb-0">
@@ -213,6 +242,16 @@ const Applicants = () => {
                     )}
                   </CButton>
                   <CButton
+                    color="secondary"
+                    variant="ghost"
+                    size="sm"
+                    title="Print questionnaire with answers"
+                    disabled={printing}
+                    onClick={() => print(selectedExam.id, [e.examEnrollmentId])}
+                  >
+                    <CIcon icon={cilPrint} />
+                  </CButton>
+                  <CButton
                     color="danger"
                     variant="ghost"
                     size="sm"
@@ -234,6 +273,7 @@ const Applicants = () => {
           <span>Auto-saves changes</span>
         </CCardFooter>
       </CCard>
+      {printHost}
     </>
   )
 }
