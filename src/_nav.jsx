@@ -121,7 +121,7 @@ const buildNav = ({ upcoming, openCreate, openPreview }) => [
     name: 'Checking and Grading',
     to: '/checking-and-grading',
     icon: <CIcon icon={cilPencil} customClassName="nav-icon" />,
-    roles: [ROLES.ADMIN, ROLES.PROCTOR],
+    roles: [ROLES.ADMIN, ROLES.PROCTOR, ROLES.CHECKER],
   },
   {
     component: CNavTitle,
