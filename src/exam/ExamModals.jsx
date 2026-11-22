@@ -189,9 +189,9 @@ const CreateExamModal = () => {
         <CModalBody>
           <CRow className="g-3">
             <CCol xs={12}>
-              <CFormLabel>Exam Title *</CFormLabel>
+              <CFormLabel>Exam Title / Position *</CFormLabel>
               <CFormInput
-                placeholder="e.g. DMO I KMD Examination"
+                placeholder="e.g. DMO I KMD"
                 value={f.examTitle}
                 onChange={set('examTitle')}
                 invalid={!!errors.examTitle}
@@ -291,14 +291,13 @@ const CreateExamModal = () => {
   )
 }
 
-const blankExaminee = { name: '', email: '', applicantCode: '' }
+const blankExaminee = { name: '', email: ''}
 
 const validateExaminee = (f) => {
   const errors = {}
   if (!f.name.trim()) errors.name = 'Full name is required.'
   if (!f.email.trim()) errors.email = 'Email is required.'
   else if (!EMAIL_RE.test(f.email.trim())) errors.email = 'Enter a valid email address.'
-  if (!f.applicantCode.trim()) errors.applicantCode = 'Applicant Code is required.'
   return errors
 }
 
@@ -314,7 +313,7 @@ const parseBulkExaminees = (raw) => {
     .map((line) => line.trim())
     .filter(Boolean)
     .forEach((line, i) => {
-      const [name, email, applicantCode] = line.split(',').map((p) => p.trim())
+      const [name, email] = line.split(',').map((p) => p.trim())
       const lineNo = i + 1
       if (!name || !email) {
         skipped.push(`Line ${lineNo}: missing name or email.`)
@@ -333,7 +332,6 @@ const parseBulkExaminees = (raw) => {
       valid.push({
         name,
         email,
-        applicantCode: applicantCode || `MinDAES-${Math.floor(1000 + Math.random() * 9000)}`,
       })
     })
 
@@ -371,7 +369,6 @@ const AddExamineeModal = () => {
         {
           name: f.name.trim(),
           email: f.email.trim(),
-          applicantCode: f.applicantCode.trim(),
         },
       ],
       `Added ${f.name.trim()} to roster. Invite code sent!`,
@@ -383,7 +380,7 @@ const AddExamineeModal = () => {
     e.preventDefault()
     const { valid, skipped } = parseBulkExaminees(bulk)
     if (!valid.length) {
-      toast('No valid lines found. Use: Full Name, Email, Applicant Code', 'error')
+      toast('No valid lines found. Use: Full Name, Email', 'error')
       return
     }
     addApplicants(
@@ -437,18 +434,6 @@ const AddExamineeModal = () => {
                 feedbackInvalid={errors.email}
               />
             </div>
-            <CRow className="g-3">
-              <CCol xs={12}>
-                <CFormLabel>Applicant Code *</CFormLabel>
-                <CFormInput
-                  placeholder="DMO_I_KMD_00001"
-                  value={f.applicantCode}
-                  onChange={set('applicantCode')}
-                  invalid={!!errors.applicantCode}
-                  feedbackInvalid={errors.applicantCode}
-                />
-              </CCol>
-            </CRow>
           </CModalBody>
           <CModalFooter>
             <CButton color="secondary" variant="outline" onClick={closeAddApplicant}>
@@ -464,7 +449,7 @@ const AddExamineeModal = () => {
           <CModalBody>
             <CFormLabel>Paste Bulk Applicant Records</CFormLabel>
             <p className="small text-body-secondary">
-              Format line by line: <code>Full Name, Email, Applicant Code</code>.
+              Format line by line: <code>Full Name, Email</code>.
             </p>
             <CFormTextarea
               rows={6}
@@ -472,7 +457,7 @@ const AddExamineeModal = () => {
               value={bulk}
               onChange={(e) => setBulk(e.target.value)}
               placeholder={
-                'Juan dela Cruz, juan.delacruz@gmail.com, DMO_I_KMD_00001\nJane Doe, jane.doe@gmail.com, DMO_I_KMD_00002\nCharles Smith, charles.smith@gmail.com, DMO_I_KMD_00003'
+                'Juan dela Cruz, juan.delacruz@gmail.com\nJane Doe, jane.doe@gmail.com\nCharles Smith, charles.smith@gmail.com'
               }
             />
           </CModalBody>
