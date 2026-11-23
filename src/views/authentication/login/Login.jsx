@@ -17,7 +17,7 @@ import CIcon from '@coreui/icons-react'
 import { cilLockLocked, cilUser } from '@coreui/icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 //import { faGoogle } from '@fortawesome/free-brands-svg-icons'
-import { faRightToBracket } from '@fortawesome/free-solid-svg-icons'
+import { faEyeSlash, faRightToBracket, faEye } from '@fortawesome/free-solid-svg-icons'
 import { AuthContext } from 'src/context/AuthContext'
 import { useToast } from 'src/context/ToastContext'
 import { homePathForRole } from 'src/constants/roles'
@@ -26,6 +26,7 @@ import { homePathForRole } from 'src/constants/roles'
 const Login = () => {
   const [username, setUsername] = useState(null)
   const [password, setPassword] = useState(null)
+  const [showPassword, setShowPassword] = useState(false)
   const { login } = useContext(AuthContext)
   const notify = useToast()
   const navigate = useNavigate()
@@ -98,12 +99,31 @@ const Login = () => {
                         <CIcon icon={cilLockLocked} />
                       </CInputGroupText>
                       <CFormInput
-                        type="password"
+                        type={showPassword ? 'text' : 'password'}
                         name="password"
-                        placeholder="Password"
+                        placeholder="Password or Applicant Code"
                         autoComplete="current-password"
                         onChange={(e) => setPassword(e.target.value)}
+                        style={{ paddingRight: '40px', borderRadius: '0px 12px 12px 0px' }}
                       />
+                      <button
+                        type="button"
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        onClick={() => setShowPassword(!showPassword)}
+                        style={{
+                          position: 'absolute',
+                          right: '16px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          cursor: 'pointer',
+                          zIndex: 6,
+                          border: 0,
+                          padding: 0,
+                          background: 'transparent',
+                        }}
+                      >
+                        <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
+                      </button>
                     </CInputGroup>
                     <CRow>
                       <CCol xs={12}>

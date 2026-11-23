@@ -52,17 +52,6 @@ const PortalShell = ({ subtitle, hud, action, progress, children }) => (
       style={{ height: 64, borderBottom: '1px solid rgba(255,255,255,.1)' }}
     >
       <div className="d-flex align-items-center gap-3" style={{ minWidth: 0 }}>
-        <div
-          className="d-flex align-items-center justify-content-center rounded-3 flex-shrink-0"
-          style={{
-            width: 36,
-            height: 36,
-            background: 'linear-gradient(135deg, var(--cui-success), var(--cui-info))',
-            color: '#0f172a',
-          }}
-        >
-          <CIcon icon={cilEducation} />
-        </div>
         <div style={{ minWidth: 0 }}>
           <div className="d-flex align-items-center gap-2">
             <h1 className="h6 fw-bold mb-0 text-truncate">{PORTAL_BRAND}</h1>

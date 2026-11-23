@@ -762,8 +762,9 @@ const ApplicantExamTaking = () => {
                   <PortalIcon icon={cilFullscreen} tone="warning" />
                   <h5>You left full screen</h5>
                   <p className="text-body-secondary">
-                    The questions are hidden until you return to full screen. Your time is still
-                    running, and your answers so far are saved.
+                    The questions will remain hidden until you return to full-screen mode. Your examination timer will continue running
+                    and all your answers so far have been saved. 
+                    However, please be aware that the proctor has been notified that you exited full-screen mode.
                   </p>
                   {canRequest && (
                     <CButton color="primary" onClick={enter}>
