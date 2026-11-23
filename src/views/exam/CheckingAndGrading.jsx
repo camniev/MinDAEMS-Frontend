@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
 import {
   CAlert,
@@ -27,13 +27,20 @@ import {
 } from '@coreui/icons'
 import { API_BASE_URL, extractErrorMessage } from 'src/assets/api/Api'
 import { usePrintSubmissions } from 'src/print/PrintSubmissions'
+import { AuthContext } from 'src/context/AuthContext'
+import { useAuthedFetch } from 'src/context/useAuthedFetch'
+import AssignCheckersModal from './AssignCheckersModal' // keep this file next to CheckingAndGrading.jsx
 
 // ---------------------------------------------------------------------------
 // API. The exam list endpoint already exists. The three /Grading endpoints are
 // NEW: their request/response shapes are described in the comments below and
 // need a matching controller.
 // ---------------------------------------------------------------------------
-const EXAMS_ENDPOINT = `${API_BASE_URL}/Exam/GetExamSchedules`
+// The server returns only the exams THIS user may check: everything for an Administrator or
+// Proctor, just the assigned schedules for a Checker (and never the roster or answer keys).
+const EXAMS_ENDPOINT = `${API_BASE_URL}/Grading/Exams`
+// Roles that may assign checkers. Must equal the role names in AppRoles (ExamCheckers.cs).
+const ASSIGNER_ROLES = ['Administrator', 'Proctor']
 const rosterEndpoint = (examId) => `${API_BASE_URL}/Grading/${examId}/Roster`
 const submissionEndpoint = (enrollmentId) => `${API_BASE_URL}/Grading/Enrollments/${enrollmentId}`
 const gradeEndpoint = (enrollmentId) => `${API_BASE_URL}/Grading/Enrollments/${enrollmentId}/Grade`
@@ -57,8 +64,6 @@ const gradeEndpoint = (enrollmentId) => `${API_BASE_URL}/Grading/Enrollments/${e
 //   The server should clamp each mark to 0..Question.Points, save it to
 //   Answer.PointsAwarded and, only when finalize is true, recompute and store
 //   ExamEnrollment.Score (percentage, 0-100).
-
-const GRADABLE_EXCLUDED_STATUSES = ['Upcoming', 'Archived']
 
 const FILTERS = [
   ['all', 'All'],
@@ -85,8 +90,8 @@ const ESSAY_CSS = `
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-const fetchJson = async (url, fallback, options) => {
-  const response = await fetch(url, options)
+const fetchJson = async (fetcher, url, fallback, options) => {
+  const response = await fetcher(url, options)
   if (!response.ok) throw new Error(await extractErrorMessage(response, fallback))
   return response.json()
 }
@@ -328,6 +333,10 @@ const CheckingAndGrading = ({ initialExamId }) => {
   const [exams, setExams] = useState([])
   const [examsState, setExamsState] = useState('loading') // loading | ready | error
   const [examId, setExamId] = useState(initialExamId ?? '')
+  const { authedFetch } = useAuthedFetch()
+  const { user } = useContext(AuthContext)
+  const canAssign = ASSIGNER_ROLES.includes(user?.role)
+  const [assignOpen, setAssignOpen] = useState(false)
 
   const [roster, setRoster] = useState(null)
   const [rosterState, setRosterState] = useState('idle') // idle | loading | ready | error
@@ -354,10 +363,10 @@ const CheckingAndGrading = ({ initialExamId }) => {
   // --- exam list -------------------------------------------------------------
   useEffect(() => {
     let ignore = false
-    fetchJson(EXAMS_ENDPOINT, 'Failed to load exam schedules.')
+    fetchJson(authedFetch, EXAMS_ENDPOINT, 'Failed to load exam schedules.')
       .then((list) => {
         if (ignore) return
-        const gradable = list.filter((e) => !GRADABLE_EXCLUDED_STATUSES.includes(e.status))
+        const gradable = list // already limited to this user's exams by the server
         setExams(gradable)
         setExamId((cur) => cur || gradable[0]?.examId || '')
         setExamsState('ready')
@@ -371,14 +380,14 @@ const CheckingAndGrading = ({ initialExamId }) => {
     return () => {
       ignore = true
     }
-  }, [])
+  }, [authedFetch])
 
   // --- roster for the selected exam -----------------------------------------
   const refreshRoster = useCallback(async (id) => {
-    const data = await fetchJson(rosterEndpoint(id), 'Failed to load submissions.')
+    const data = await fetchJson(authedFetch, rosterEndpoint(id), 'Failed to load submissions.')
     setRoster(data)
     return data
-  }, [])
+  }, [authedFetch])
 
   useEffect(() => {
     if (!examId) return undefined
@@ -415,7 +424,7 @@ const CheckingAndGrading = ({ initialExamId }) => {
     setDetailState('loading')
     setDetailError(null)
     setNotice(null)
-    fetchJson(submissionEndpoint(selectedId), 'Failed to load this submission.')
+    fetchJson(authedFetch, submissionEndpoint(selectedId), 'Failed to load this submission.')
       .then((data) => {
         if (ignore) return
         const start = initialMarks(data)
@@ -433,7 +442,7 @@ const CheckingAndGrading = ({ initialExamId }) => {
     return () => {
       ignore = true
     }
-  }, [selectedId])
+  }, [selectedId, authedFetch])
 
   // --- derived ---------------------------------------------------------------
   const questions = useMemo(
@@ -501,7 +510,7 @@ const CheckingAndGrading = ({ initialExamId }) => {
           .filter((q) => answerByQ[q.id] && marks[q.id] != null)
           .map((q) => ({ questionId: q.id, pointsAwarded: marks[q.id] })),
       }
-      const result = await fetchJson(gradeEndpoint(selectedId), 'Failed to save grades.', {
+      const result = await fetchJson(authedFetch, gradeEndpoint(selectedId), 'Failed to save grades.', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -542,7 +551,11 @@ const CheckingAndGrading = ({ initialExamId }) => {
               disabled={examsState !== 'ready' || exams.length === 0}
               onChange={(e) => selectExam(e.target.value)}
             >
-              {exams.length === 0 && <option value="">No exam schedules to grade</option>}
+              {exams.length === 0 && (
+                <option value="">
+                  {canAssign ? 'No exam schedules to grade' : 'No exam schedules are assigned to you yet'}
+                </option>
+              )}
               {exams.map((e) => (
                 <option key={e.examId} value={e.examId}>
                   {e.examTitle} ({e.examCode}) — {e.status}
@@ -550,11 +563,34 @@ const CheckingAndGrading = ({ initialExamId }) => {
               ))}
             </CFormSelect>
           </div>
-          <div className="small text-body-secondary">
-            Passing score: <strong>{passingScore}%</strong>
+          <div className="d-flex align-items-center gap-3">
+            {canAssign && (
+              <CButton
+                color="secondary"
+                variant="outline"
+                size="sm"
+                disabled={!examId}
+                onClick={() => setAssignOpen(true)}
+                title="Choose which checkers can check this exam schedule"
+              >
+                Assign checkers
+              </CButton>
+            )}
+            <div className="small text-body-secondary">
+              Passing score: <strong>{passingScore}%</strong>
+            </div>
           </div>
         </CCardBody>
       </CCard>
+
+      {canAssign && (
+        <AssignCheckersModal
+          visible={assignOpen}
+          examId={examId}
+          examTitle={exams.find((e) => e.examId === examId)?.examTitle}
+          onClose={() => setAssignOpen(false)}
+        />
+      )}
 
       {examsState === 'loading' && (
         <div className="text-center text-body-secondary py-5">

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { API_BASE_URL, extractErrorMessage } from 'src/assets/api/Api'
+import { useAuthedFetch } from 'src/context/useAuthedFetch'
 
 // Printing of each applicant's questionnaire with their answers, using the browser's own
 // print dialog (so HR sets margins/printer there).
@@ -223,6 +224,7 @@ const PrintLayer = ({ data, onDone }) => {
 }
 
 export const usePrintSubmissions = () => {
+  const { authedFetch } = useAuthedFetch() // the print endpoint is role-protected (Administrator / Proctor / Checker)
   const [job, setJob] = useState(null)
   const [printing, setPrinting] = useState(false) // true while the data is being fetched
   const [notice, setNotice] = useState(null) // { color, text }
@@ -231,7 +233,7 @@ export const usePrintSubmissions = () => {
     setPrinting(true)
     setNotice(null)
     try {
-      const response = await fetch(printDataEndpoint(examId), {
+      const response = await authedFetch(printDataEndpoint(examId), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ examEnrollmentIds }),
@@ -262,7 +264,7 @@ export const usePrintSubmissions = () => {
     } finally {
       setPrinting(false)
     }
-  }, [])
+  }, [authedFetch])
 
   const handleDone = useCallback(() => setJob(null), [])
   const clearNotice = useCallback(() => setNotice(null), [])
