@@ -78,14 +78,30 @@ const emptyExam = () => {
   }
 }
 
-const validateExam = (f) => {
+// `original` is the exam being edited (null when creating). An exam whose date has already passed can
+// still have its title or instructions edited: the "not in the past" rule only applies to a date that
+// is being changed.
+// An existing exam (as GetExamSchedules returns it) -> the form's values.
+const formFromExam = (e) => ({
+  examTitle: e.examTitle ?? '',
+  examCode: e.examCode ?? '',
+  accessType: e.accessType === 'Public' ? 'Public' : 'Private',
+  examDate: e.examDate ?? '',
+  startTime: (e.startTime ?? '').slice(0, 5), // "10:00:00" -> "10:00" for <input type="time">
+  durationMinutes: e.durationMinutes ?? 60,
+  passingScore: e.passingScore ?? 70,
+  instructions: e.instructions ?? '',
+})
+
+const validateExam = (f, original = null) => {
   const errors = {}
   if (!f.examTitle.trim()) errors.examTitle = 'Exam title is required.'
   if (!f.examCode.trim()) errors.examCode = 'Exam code is required.'
   else if (!/^[A-Za-z0-9_-]+$/.test(f.examCode.trim()))
     errors.examCode = 'Use only letters, numbers, underscores, and dashes.'
   if (!f.examDate) errors.examDate = 'Scheduled date is required.'
-  else if (f.examDate < todayISO()) errors.examDate = 'Date cannot be in the past.'
+  else if (f.examDate < todayISO() && (!original || f.examDate !== original.examDate))
+    errors.examDate = 'Date cannot be in the past.'
   if (!f.startTime) errors.startTime = 'Start time is required.'
   const durationMinutes = Number(f.durationMinutes)
   if (!Number.isFinite(durationMinutes) || durationMinutes < 5) errors.durationMinutes = 'Duration must be at least 5 minutes.'
@@ -95,8 +111,31 @@ const validateExam = (f) => {
   return errors
 }
 
+// One modal for both "Schedule New Examination" and "Edit Examination". Edit mode is on while the
+// context's `editingExam` is set (Schedules' Edit button calls openEdit(id)).
 const CreateExamModal = () => {
-  const { createOpen, closeCreate, addExam, toast } = useExam()
+  const { createOpen, closeCreate, addExam, toast, editingExam, closeEdit, updateExam } = useExam()
+
+  // Remember the mode and the exam while the modal fades out: closing clears editingExam at once,
+  // and without this the title and buttons would flip to the "create" wording mid-animation.
+  const lastMode = useRef('create')
+  const lastExam = useRef(null)
+  if (editingExam) {
+    lastMode.current = 'edit'
+    lastExam.current = editingExam
+  } else if (createOpen) {
+    lastMode.current = 'create'
+  }
+  const isEdit = lastMode.current === 'edit'
+  const exam = isEdit ? lastExam.current : null
+  const close = isEdit ? closeEdit : closeCreate
+
+  // What the server lets you change (it enforces the same rules): an ongoing exam may only get a new
+  // title and instructions, and the code is locked once applicants are enrolled because their codes
+  // already begin with it.
+  const ongoing = isEdit && exam?.status === 'Ongoing'
+  const codeLocked = isEdit && (ongoing || (exam?.applicants?.length ?? 0) > 0)
+
   const [f, setF] = useState(emptyExam)
   const [errors, setErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -114,14 +153,14 @@ const CreateExamModal = () => {
   }
 
   const handleShow = () => {
-    setF(emptyExam())
+    setF(editingExam ? formFromExam(editingExam) : emptyExam())
     setErrors({})
     setIsSubmitting(false)
   }
 
   const submit = async (e) => {
     e.preventDefault()
-    const validationErrors = validateExam(f)
+    const validationErrors = validateExam(f, exam)
     if (Object.keys(validationErrors).length) {
       setErrors(validationErrors)
       return
@@ -140,7 +179,18 @@ const CreateExamModal = () => {
       userId: USER_ID,
     }
 
-    console.log(JSON.stringify(payload))
+    // EDIT: same fields, sent to PUT api/Exam/{id} (userId is only for creating).
+    if (isEdit) {
+      const { userId: _userId, ...changes } = payload
+      setIsSubmitting(true)
+      try {
+        // updateExam shows its own success / error toast and says whether it worked.
+        if (await updateExam(exam.id, changes)) closeEdit()
+      } finally {
+        if (isMounted.current) setIsSubmitting(false)
+      }
+      return
+    }
 
     setIsSubmitting(true)
     try {
@@ -174,9 +224,9 @@ const CreateExamModal = () => {
   return (
     <CModal
       size="lg"
-      visible={createOpen}
+      visible={createOpen || Boolean(editingExam)}
       onShow={handleShow}
-      onClose={() => !isSubmitting && closeCreate()}
+      onClose={() => !isSubmitting && close()}
       backdrop={isSubmitting ? 'static' : true}
       keyboard={!isSubmitting}
       scrollable
@@ -184,9 +234,20 @@ const CreateExamModal = () => {
     >
       <CForm noValidate onSubmit={submit}>
         <CModalHeader closeButton={!isSubmitting}>
-          <CModalTitle>Schedule New Examination</CModalTitle>
+          <CModalTitle>{isEdit ? 'Edit Examination' : 'Schedule New Examination'}</CModalTitle>
         </CModalHeader>
         <CModalBody>
+          {ongoing && (
+            <CAlert color="warning">
+              This exam is <strong>ongoing</strong>, so only the title and instructions can be changed.
+            </CAlert>
+          )}
+          {isEdit && !ongoing && codeLocked && (
+            <CAlert color="info">
+              The exam code can&apos;t be changed because applicants are already enrolled: their
+              applicant codes start with it.
+            </CAlert>
+          )}
           <CRow className="g-3">
             <CCol xs={12}>
               <CFormLabel>Exam Title / Position *</CFormLabel>
@@ -207,12 +268,12 @@ const CreateExamModal = () => {
                 onChange={set('examCode')}
                 invalid={!!errors.examCode}
                 feedbackInvalid={errors.examCode}
-                disabled={isSubmitting}
+                disabled={isSubmitting || codeLocked}
               />
             </CCol>
             <CCol sm={6}>
               <CFormLabel>Access Type *</CFormLabel>
-              <CFormSelect value={f.accessType} onChange={set('accessType')} disabled={isSubmitting}>
+              <CFormSelect value={f.accessType} onChange={set('accessType')} disabled={isSubmitting || ongoing}>
                 <option value="Private">Private (Passcode Required)</option>
                 <option value="Public">Public Access</option>
               </CFormSelect>
@@ -221,12 +282,12 @@ const CreateExamModal = () => {
               <CFormLabel>Scheduled Date *</CFormLabel>
               <CFormInput
                 type="date"
-                min={todayISO()}
+                min={isEdit ? undefined : todayISO()}
                 value={f.examDate}
                 onChange={set('examDate')}
                 invalid={!!errors.examDate}
                 feedbackInvalid={errors.examDate}
-                disabled={isSubmitting}
+                disabled={isSubmitting || ongoing}
               />
             </CCol>
             <CCol sm={6}>
@@ -237,7 +298,7 @@ const CreateExamModal = () => {
                 onChange={set('startTime')}
                 invalid={!!errors.startTime}
                 feedbackInvalid={errors.startTime}
-                disabled={isSubmitting}
+                disabled={isSubmitting || ongoing}
               />
             </CCol>
             <CCol sm={6}>
@@ -249,7 +310,7 @@ const CreateExamModal = () => {
                 onChange={set('durationMinutes')}
                 invalid={!!errors.durationMinutes}
                 feedbackInvalid={errors.durationMinutes}
-                disabled={isSubmitting}
+                disabled={isSubmitting || ongoing}
               />
             </CCol>
             <CCol sm={6}>
@@ -262,7 +323,7 @@ const CreateExamModal = () => {
                 onChange={set('passingScore')}
                 invalid={!!errors.passingScore}
                 feedbackInvalid={errors.passingScore}
-                disabled={isSubmitting}
+                disabled={isSubmitting || ongoing}
               />
             </CCol>
             <CCol xs={12}>
@@ -278,12 +339,12 @@ const CreateExamModal = () => {
           </CRow>
         </CModalBody>
         <CModalFooter>
-          <CButton color="secondary" variant="outline" onClick={closeCreate} disabled={isSubmitting}>
+          <CButton color="secondary" variant="outline" onClick={close} disabled={isSubmitting}>
             Cancel
           </CButton>
           <CButton color="primary" type="submit" disabled={isSubmitting}>
             {isSubmitting && <CSpinner size="sm" className="me-2" />}
-            Save Schedule Event
+            {isEdit ? 'Save Changes' : 'Save Schedule Event'}
           </CButton>
         </CModalFooter>
       </CForm>

@@ -13,6 +13,7 @@ const uid = (p) => `${p}-${Date.now()}${Math.random().toString(36).slice(2, 5)}`
 // this fallback just matches the endpoint you've been testing against.
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5026/api'
 const GET_EXAM_SCHEDULES_ENDPOINT = `${API_BASE_URL}/Exam/GetExamSchedules`
+const updateExamEndpoint = (examId) => `${API_BASE_URL}/Exam/${examId}`
 const saveExamQuestionsEndpoint = (examId) => `${API_BASE_URL}/Question/${examId}/SaveQuestions`
 const enrollApplicantsEndpoint = (examId) => `${API_BASE_URL}/Applicant/${examId}/EnrollApplicants`
 // Emails (and, if needed, creates/updates the login for) one enrollment's applicant.
@@ -69,7 +70,7 @@ const normalizeExam = (apiExam) => ({
 })
 
 export const ExamProvider = ({ children }) => {
-  const { user } = useContext(AuthContext)
+  const { user, getAccessToken } = useContext(AuthContext)
   const [exams, setExams] = useState([])
   const [examsLoading, setExamsLoading] = useState(true)
   const [examsError, setExamsError] = useState(null)
@@ -77,6 +78,7 @@ export const ExamProvider = ({ children }) => {
   const [selectedId, setSelectedId] = useState(null)
   const [search, setSearch] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
+  const [editingId, setEditingId] = useState(null) // the exam schedule being edited in the schedule modal
   const [addApplicantOpen, setAddApplicantOpen] = useState(false)
   const [previewId, setPreviewId] = useState(null)
   const isMounted = useRef(true)
@@ -155,6 +157,30 @@ export const ExamProvider = ({ children }) => {
       toast('Exam Schedule successfully created!', 'success')
     },
     refetchExams: fetchExams,
+    // Edit an existing schedule. `data` is the same shape the schedule modal sends when creating:
+    // { examTitle, examCode, examDate, startTime, durationMinutes, passingScore, instructions,
+    //   accessType }. The server decides what can still change for the exam's status.
+    // Resolves true on success so the modal knows it can close.
+    updateExam: async (examId, data) => {
+      try {
+        const token = await getAccessToken()
+        const response = await fetch(updateExamEndpoint(examId), {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify(data),
+        })
+        if (!response.ok) {
+          throw new Error(await extractErrorMessage(response, 'Failed to update the exam schedule.'))
+        }
+        await fetchExams()
+        toast('Exam schedule updated.', 'success')
+        return true
+      } catch (error) {
+        console.error('Failed to update exam schedule:', error)
+        toast(error.message || 'Failed to update the exam schedule.', 'error')
+        return false
+      }
+    },
     // "Delete" is soft — this is the Archived status, not a hard DELETE.
     // Archived exams drop out of the default fetch (includeArchived above),
     // so this is also what makes an exam disappear from the main schedules
@@ -498,6 +524,10 @@ export const ExamProvider = ({ children }) => {
       createOpen,
       openCreate: () => setCreateOpen(true),
       closeCreate: () => setCreateOpen(false),
+      // Edit mode of the same schedule modal: null when not editing.
+      editingExam: exams.find((e) => e.id === editingId) || null,
+      openEdit: (id) => setEditingId(id || selectedExam?.id || null),
+      closeEdit: () => setEditingId(null),
       addApplicantOpen,
       openAddApplicant: () => setAddApplicantOpen(true),
       closeAddApplicant: () => setAddApplicantOpen(false),
@@ -514,6 +544,7 @@ export const ExamProvider = ({ children }) => {
       selectedId,
       search,
       createOpen,
+      editingId,
       addApplicantOpen,
       previewId,
       toast,

@@ -76,7 +76,7 @@ const Dashboard = () => {
   return (
     <>
       <CRow className="g-3 mb-4">
-        <CCol sm={6} lg={3}>
+        <CCol sm={6} lg={4}>
           <Stat
             label="Active Exams"
             value={exams.filter((e) => e.status === 'Ongoing').length}
@@ -86,7 +86,7 @@ const Dashboard = () => {
             note="Live test sessions ongoing"
           />
         </CCol>
-        <CCol sm={6} lg={3}>
+        <CCol sm={6} lg={4}>
           <Stat
             label="Upcoming Schedules"
             value={upcoming}
@@ -95,7 +95,7 @@ const Dashboard = () => {
             note="Scheduled in next 7 days"
           />
         </CCol>
-        <CCol sm={6} lg={3}>
+        <CCol sm={6} lg={4}>
           <Stat
             label="Total Applicants"
             value={totalApplicants}
@@ -104,7 +104,7 @@ const Dashboard = () => {
             note="Enrolled across all events"
           />
         </CCol>
-        <CCol sm={6} lg={3}>
+        {/* <CCol sm={6} lg={3}>
           <Stat
             label="Avg. Pass Rate"
             value="84.2%"
@@ -117,7 +117,7 @@ const Dashboard = () => {
               </>
             }
           />
-        </CCol>
+        </CCol> */}
       </CRow>
 
       <CRow className="g-3 mb-4">

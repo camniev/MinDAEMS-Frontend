@@ -10,6 +10,7 @@ import {
   cilPeople,
   cilPencil,
   cilPlus,
+  cilSettings,
   cilTrash,
   cilFolder,
   cilMediaPlay,
@@ -36,6 +37,7 @@ const Schedules = () => {
     search,
     setSelectedId,
     openCreate,
+    openEdit,
     archiveExam,
     restoreExam,
     openExam,
@@ -97,7 +99,7 @@ const Schedules = () => {
       ) : (
         <CRow className="g-4">
           {list.map((e) => (
-            <CCol md={6} lg={4} key={e.id}>
+            <CCol md={6} lg={6} key={e.id}>
               <CCard className="h-100">
                 <CCardBody className="d-flex flex-column justify-content-between">
                   <div>
@@ -136,10 +138,23 @@ const Schedules = () => {
                       {e.applicants.length} Applicants
                     </span>
                     <div className="d-flex gap-1">
+                      {/* Edit the schedule's own details (title, code, date, time, duration, passing
+                          score, instructions) in the same modal used to create it. Closed and
+                          archived schedules are read-only. */}
+                      {(e.status === 'Upcoming' || e.status === 'Ongoing') && (
+                        <CButton
+                          color="light"
+                          size="sm"
+                          title="Edit Schedule Details"
+                          onClick={() => openEdit(e.id)}
+                        >
+                          <CIcon icon={cilSettings} /> Details
+                        </CButton>
+                      )}
                       <CButton
                         color="light"
                         size="sm"
-                        title="Edit Form"
+                        title="Edit Questionnaire"
                         onClick={() => go(e.id, '/builder')}
                       >
                         <CIcon icon={cilPencil} /> Form
